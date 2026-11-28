@@ -1,4 +1,4 @@
-<!DOCTYPE html> 
+<!DOCTYPE html>
 <html lang="en">
 <head>
   <meta charset="UTF-8" />
@@ -568,7 +568,7 @@
         tabLabel: "Location",
         badge: "UNIT & OFFICE",
         title: "Unit & Office",
-        addressLine1: "6705/road no,08 sachin G.I.D.C,", // Replace with your exact unit / industrial estate address
+        addressLine1: "6705 Road no.08 Sachin G.I.D.C.", // Replace with your exact unit / industrial estate address
         addressLine2: "Surat, Gujarat, India",
         googleMapsUrl: "https://maps.app.goo.gl/wW6VutsNTmBXXdJ7A?g_st=ic", // If cleared (""), auto-uses lat,lng below for Google Maps & Location QR
         lat: 21.0807683,
@@ -2754,6 +2754,39 @@
       }
 
       /**
+       * Word-wraps text cleanly onto a maximum number of lines for the PNG card.
+       */
+      function wrapCanvasText(ctx, text, maxWidth, maxLines) {
+        const cleaned = String(text || '').trim();
+        if (!cleaned) return [];
+        const words = cleaned.split(/\s+/);
+        const lines = [];
+        let current = '';
+
+        for (let i = 0; i < words.length; i++) {
+          const word = words[i];
+          const test = current ? `${current} ${word}` : word;
+          if (ctx.measureText(test).width <= maxWidth) {
+            current = test;
+          } else {
+            if (current) lines.push(current);
+            current = word;
+            if (lines.length === maxLines - 1) {
+              const rest = [current].concat(words.slice(i + 1)).join(' ');
+              let clipped = rest;
+              while (clipped.length > 1 && ctx.measureText(clipped + '…').width > maxWidth) {
+                clipped = clipped.slice(0, -1).trimEnd();
+              }
+              lines.push(ctx.measureText(rest).width <= maxWidth ? rest : clipped + '…');
+              return lines;
+            }
+          }
+        }
+        if (current) lines.push(current);
+        return lines;
+      }
+
+      /**
        * Renders the 1600x960 luxury textile visiting card ALWAYS on a pure white background.
        */
       function renderCardCanvas() {
@@ -2977,9 +3010,22 @@
         // Vertically Centered White QR Card Encoding the Location URL
         // =====================================================================
         const qrCardW = 468;
-        const qrCardH = 620;
+        const qrSize = 362;
+        const maxAddrW = qrCardW - 60;
+
+        // Pre-measure wrapped addressLine1 + addressLine2 so the QR plate fits both cleanly
+        ctx.font = `700 20px ${fontFamily}`;
+        const addr1Lines = wrapCanvasText(ctx, CARD_CONFIG.location.addressLine1, maxAddrW, 3);
+        const addr2Raw = String(CARD_CONFIG.location.addressLine2 || '').trim();
+
+        const line1Gap = 27;
+        const addrBlockH =
+          (addr1Lines.length > 0 ? 34 + (addr1Lines.length - 1) * line1Gap : 0) +
+          (addr2Raw ? 34 : 0);
+
+        const qrCardH = Math.min(740, Math.max(620, 512 + addrBlockH + 34));
         const qrCardX = CARD_W - 86 - qrCardW; // 1046
-        const qrCardY = Math.round((CARD_H - qrCardH) / 2); // 170
+        const qrCardY = Math.round((CARD_H - qrCardH) / 2);
 
         // Subtle Vertical Hairline Separator
         ctx.fillStyle = '#E2E8F0';
@@ -3009,36 +3055,50 @@
         qrBarGrad.addColorStop(0.5, colors[2]);
         qrBarGrad.addColorStop(1, colors[5]);
         ctx.fillStyle = qrBarGrad;
-        traceRoundedRect(ctx, qrCardX + (qrCardW - pillBarW) / 2, qrCardY + 28, pillBarW, 6, 3);
+        traceRoundedRect(ctx, qrCardX + (qrCardW - pillBarW) / 2, qrCardY + 26, pillBarW, 6, 3);
         ctx.fill();
 
         // Real, Scannable Location QR Code via Embedded PureQR Engine
         const locationUrl = getGoogleMapsUrl(CARD_CONFIG.location);
-        const qrSize = 376;
         const qrX = qrCardX + Math.round((qrCardW - qrSize) / 2);
-        const qrY = qrCardY + 56;
+        const qrY = qrCardY + 52;
         PureQR.drawToContext(ctx, locationUrl, qrX, qrY, qrSize, '#0F172A', '#FFFFFF', 2);
 
         // Caption Directly Beneath QR: "SCAN FOR LOCATION"
         const qrCenterX = qrCardX + qrCardW / 2;
+        const scanTitleY = qrY + qrSize + 50;
         ctx.fillStyle = '#0F172A';
-        ctx.font = `800 25px ${fontFamily}`;
+        ctx.font = `800 24px ${fontFamily}`;
         ctx.textAlign = 'center';
         ctx.textBaseline = 'alphabetic';
-        ctx.fillText('SCAN FOR LOCATION', qrCenterX, qrY + qrSize + 54);
+        ctx.fillText('SCAN FOR LOCATION', qrCenterX, scanTitleY);
 
-        // Location Pin Subtitle (e.g., Surat, Gujarat, India)
-        const locSub = CARD_CONFIG.location.addressLine2 || CARD_CONFIG.location.addressLine1 || 'Surat, Gujarat';
-        const shortLoc = locSub.length > 30 ? locSub.slice(0, 29) + '…' : locSub;
-        ctx.font = `600 21px ${fontFamily}`;
-        const subW = ctx.measureText(shortLoc).width;
-        const pinX = qrCenterX - subW / 2 - 14;
-        const subY = qrY + qrSize + 94;
+        // Address Line 1 (wrapped cleanly up to 3 lines)
+        let cursorY = scanTitleY;
+        if (addr1Lines.length > 0) {
+          ctx.fillStyle = '#1E293B';
+          ctx.font = `700 20px ${fontFamily}`;
+          ctx.textAlign = 'center';
+          addr1Lines.forEach((lineText, idx) => {
+            cursorY = scanTitleY + 38 + idx * line1Gap;
+            ctx.fillText(lineText, qrCenterX, cursorY);
+          });
+        }
 
-        drawMapPin(ctx, pinX, subY - 7, colors[0]);
-        ctx.fillStyle = '#475569';
-        ctx.textAlign = 'left';
-        ctx.fillText(shortLoc, pinX + 18, subY);
+        // Address Line 2 with Map Pin Icon (e.g., Surat, Gujarat, India)
+        if (addr2Raw) {
+          ctx.font = `600 19px ${fontFamily}`;
+          const addr2Lines = wrapCanvasText(ctx, addr2Raw, maxAddrW - 34, 1);
+          const addr2Text = addr2Lines[0] || addr2Raw;
+          const subW = ctx.measureText(addr2Text).width;
+          const pinX = qrCenterX - subW / 2 - 12;
+          const subY = cursorY + 36;
+
+          drawMapPin(ctx, pinX, subY - 6, colors[0]);
+          ctx.fillStyle = '#475569';
+          ctx.textAlign = 'left';
+          ctx.fillText(addr2Text, pinX + 16, subY);
+        }
 
         // Crisp Subtle Outer Border Around Entire White Card
         ctx.restore();
