@@ -7,10 +7,18 @@
   <meta id="theme-color-meta" name="theme-color" content="#F6F7FA" />
   <link rel="apple-touch-icon" href="./logo.png" />
 
-  <!-- Google Font: Inter -->
+  <!-- Optimized Non-Blocking Google Font: Inter (trimmed to 3 essential weights for ~40% less font data) -->
   <link rel="preconnect" href="https://fonts.googleapis.com" />
   <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
-  <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800&display=swap" rel="stylesheet" />
+  <link
+    href="https://fonts.googleapis.com/css2?family=Inter:wght@500;700;800&display=swap"
+    rel="stylesheet"
+    media="print"
+    onload="this.media='all'"
+  />
+  <noscript>
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@500;700;800&display=swap" rel="stylesheet" />
+  </noscript>
 
   <!-- Immediate System Theme Color Sync (Strict OS-only, zero manual overrides) -->
   <script>
@@ -44,14 +52,136 @@
       },
     };
   </script>
+
+  <!-- Critical Pre-Paint Guard & Smooth Curved Incoming First-Load Animation (0 KB extra network data) -->
+  <style>
+    html, body {
+      margin: 0;
+      padding: 0;
+      width: 100%;
+      height: 100%;
+      overflow: hidden;
+      background-color: #F6F7FA;
+      color: #0F172A;
+      font-family: "Inter", -apple-system, BlinkMacSystemFont, "SF Pro Display", system-ui, sans-serif;
+    }
+    @media (prefers-color-scheme: dark) {
+      html, body {
+        background-color: #090A0F;
+        color: #F1F5F9;
+      }
+    }
+
+    /* Hide raw unstyled DOM & offscreen sections until Tailwind + JS layout are ready */
+    html:not(.app-ready) #viewport-root,
+    html:not(.app-ready) #side-nav-rail,
+    html:not(.app-ready) #canvas-wrapper {
+      opacity: 0;
+      pointer-events: none;
+    }
+    html:not(.app-ready) #section-cards,
+    html:not(.app-ready) #section-qr {
+      visibility: hidden;
+      transform: translate3d(0, 100vh, 0);
+    }
+
+    /* Minimal First-Paint Brand Loader (dissolves cleanly once ready) */
+    #intro-loader {
+      position: fixed;
+      inset: 0;
+      z-index: 999;
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+      justify-content: center;
+      gap: 16px;
+      background-color: #F6F7FA;
+      transition: opacity 420ms cubic-bezier(0.16, 1, 0.3, 1), transform 420ms cubic-bezier(0.16, 1, 0.3, 1);
+    }
+    @media (prefers-color-scheme: dark) {
+      #intro-loader {
+        background-color: #090A0F;
+      }
+    }
+    html.app-ready #intro-loader {
+      opacity: 0;
+      transform: scale(1.04);
+      pointer-events: none;
+    }
+    .intro-ring {
+      width: 44px;
+      height: 44px;
+      border-radius: 50%;
+      padding: 3px;
+      background: conic-gradient(from 0deg, #EC268F, #8A2BE2, #00AEEF, #16A34A, #FACC15, #F97316, #EC268F);
+      -webkit-mask: radial-gradient(farthest-side, transparent calc(100% - 3px), #000 0);
+      mask: radial-gradient(farthest-side, transparent calc(100% - 3px), #000 0);
+      animation: introSpin 900ms linear infinite;
+    }
+    @keyframes introSpin {
+      to { transform: rotate(360deg); }
+    }
+
+    /* Smooth Curved Incoming Staggered Reveal (Zero Bounce — easeOutExpo curve) */
+    #canvas-wrapper {
+      transition: opacity 950ms cubic-bezier(0.16, 1, 0.3, 1);
+    }
+    html.app-ready #canvas-wrapper {
+      opacity: 1;
+    }
+    #side-nav-rail {
+      transition: opacity 720ms cubic-bezier(0.16, 1, 0.3, 1) 420ms, transform 720ms cubic-bezier(0.16, 1, 0.3, 1) 420ms;
+    }
+    html:not(.app-ready) #side-nav-rail {
+      transform: translate3d(14px, -50%, 0);
+    }
+    .reveal-item {
+      opacity: 0;
+      transform: translate3d(0, 22px, 0) scale(0.97);
+      filter: blur(7px);
+      will-change: transform, opacity, filter;
+      transition:
+        opacity 820ms cubic-bezier(0.16, 1, 0.3, 1) var(--d, 0ms),
+        transform 860ms cubic-bezier(0.16, 1, 0.3, 1) var(--d, 0ms),
+        filter 820ms cubic-bezier(0.16, 1, 0.3, 1) var(--d, 0ms);
+    }
+    .reveal-logo {
+      transform: translate3d(0, 18px, 0) scale(0.86);
+      filter: blur(10px);
+    }
+    html.app-ready .reveal-item {
+      opacity: 1;
+      transform: translate3d(0, 0, 0) scale(1);
+      filter: blur(0px);
+    }
+    html.reveal-settled .reveal-item {
+      will-change: auto;
+      filter: none;
+    }
+
+    @media (prefers-reduced-motion: reduce) {
+      .intro-ring { animation: none; }
+      .reveal-item, #canvas-wrapper, #side-nav-rail, #intro-loader {
+        transition-duration: 1ms !important;
+        transition-delay: 0ms !important;
+        filter: none !important;
+        transform: none !important;
+      }
+    }
+  </style>
 </head>
 <body class="bg-canvasLight dark:bg-canvasDark text-slate-900 dark:text-slate-100 font-sans antialiased overflow-hidden select-none transition-colors duration-700 ease-silk">
+
+  <!-- Minimal Instant Pre-Paint Loader (prevents rough unstyled flash on first open) -->
+  <div id="intro-loader" aria-hidden="true">
+    <div class="intro-ring"></div>
+  </div>
 
   <!-- =========================================================================
        FIXED FULLSCREEN CANVAS: LOGO-COLOR TOUCH FLUID + 32 RANDOM 360° THREADS
        Strictly pointer-events-none so swiping, scrolling, and taps never block.
   ========================================================================= -->
-  <div aria-hidden="true" class="fixed inset-0 z-0 pointer-events-none overflow-hidden">
+  <div id="canvas-wrapper" aria-hidden="true" class="fixed inset-0 z-0 pointer-events-none overflow-hidden">
     <canvas id="fluid-yarn-canvas" class="block w-full h-full"></canvas>
   </div>
 
@@ -60,6 +190,7 @@
        Strictly uses unbroken two-sibling glassmorphism.
   ========================================================================= -->
   <nav
+    id="side-nav-rail"
     aria-label="Page sections"
     class="fixed right-3 sm:right-5 top-1/2 -translate-y-1/2 z-40 rounded-full py-2.5 px-1.5 overflow-hidden"
   >
@@ -99,7 +230,10 @@
         class="hero-inner w-full max-w-lg h-full flex flex-col items-center justify-between pt-10 pb-8 sm:pt-14 sm:pb-11 will-change-[filter,transform,opacity] origin-center"
       >
         <!-- Top Brand Tag -->
-        <div class="inline-flex items-center gap-2.5 px-4 py-1.5 rounded-full bg-white/80 dark:bg-[#161924]/80 border border-white/85 dark:border-white/15 shadow-[0_10px_28px_rgba(15,23,42,0.08)] dark:shadow-[0_12px_30px_rgba(0,0,0,0.44)]">
+        <div
+          style="--d: 40ms"
+          class="reveal-item inline-flex items-center gap-2.5 px-4 py-1.5 rounded-full bg-white/80 dark:bg-[#161924]/80 border border-white/85 dark:border-white/15 shadow-[0_10px_28px_rgba(15,23,42,0.08)] dark:shadow-[0_12px_30px_rgba(0,0,0,0.44)]"
+        >
           <span id="hero-badge-dots" class="inline-flex items-center gap-1"></span>
           <span class="text-[11px] font-semibold uppercase tracking-[0.2em] text-slate-700 dark:text-slate-200">
             NFC Digital Card
@@ -110,12 +244,17 @@
         <div class="flex flex-col items-center text-center my-auto px-2 w-full">
           <!-- Crisp 116x116 White Rounded Squircle Logo Emblem (No upload buttons) -->
           <div
-            class="w-[116px] h-[116px] rounded-[28px] bg-white p-3 shadow-[0_22px_52px_rgba(15,23,42,0.12)] dark:shadow-[0_24px_60px_rgba(0,0,0,0.56)] border border-slate-200/80 dark:border-white/20 flex items-center justify-center mb-7 overflow-hidden"
+            style="--d: 110ms"
+            class="reveal-item reveal-logo w-[116px] h-[116px] rounded-[28px] bg-white p-3 shadow-[0_22px_52px_rgba(15,23,42,0.12)] dark:shadow-[0_24px_60px_rgba(0,0,0,0.56)] border border-slate-200/80 dark:border-white/20 flex items-center justify-center mb-7 overflow-hidden"
           >
             <img
               id="brandLogo"
               src="./logo.png"
               alt="Radhe Creation Logo"
+              width="92"
+              height="92"
+              fetchpriority="high"
+              decoding="async"
               class="w-full h-full object-contain block"
             />
             <!-- Clean minimal typographic monogram fallback shown ONLY if no logo file exists yet -->
@@ -136,21 +275,22 @@
           <!-- Bold Brand Name -->
           <h1
             id="hero-brand-name"
-            class="text-3xl sm:text-5xl font-extrabold tracking-[0.07em] uppercase text-slate-900 dark:text-white leading-[1.1]"
+            style="--d: 190ms"
+            class="reveal-item text-3xl sm:text-5xl font-extrabold tracking-[0.07em] uppercase text-slate-900 dark:text-white leading-[1.1]"
           >
             RADHE CREATION
           </h1>
 
           <!-- Spectrum Divider -->
-          <div id="hero-accent-divider" aria-hidden="true" class="flex items-center gap-2 my-4"></div>
+          <div id="hero-accent-divider" style="--d: 260ms" aria-hidden="true" class="reveal-item flex items-center gap-2 my-4"></div>
 
           <!-- 3 Glass Pill Tags for Key Specialties -->
-          <div id="hero-specialties" class="flex flex-wrap items-center justify-center gap-2 max-w-md">
+          <div id="hero-specialties" style="--d: 320ms" class="reveal-item flex flex-wrap items-center justify-center gap-2 max-w-md">
             <!-- Populated from CARD_CONFIG.specialties -->
           </div>
 
           <!-- Subtle Touch Cue -->
-          <p class="mt-5 text-[11px] font-medium tracking-[0.14em] uppercase text-slate-500 dark:text-slate-400">
+          <p style="--d: 390ms" class="reveal-item mt-5 text-[11px] font-medium tracking-[0.14em] uppercase text-slate-500 dark:text-slate-400">
             trust is valuable then price
           </p>
         </div>
@@ -159,7 +299,8 @@
         <button
           id="hero-to-contact-btn"
           type="button"
-          class="group inline-flex items-center gap-3 px-6 py-3.5 rounded-full bg-white/85 dark:bg-[#161924]/85 border border-white/90 dark:border-white/15 shadow-[0_14px_36px_rgba(15,23,42,0.11)] dark:shadow-[0_18px_42px_rgba(0,0,0,0.48)] text-[13px] font-semibold text-slate-900 dark:text-white hover:bg-white dark:hover:bg-[#1E2232] active:scale-[0.98] transition-all duration-300 ease-silk cursor-pointer"
+          style="--d: 460ms"
+          class="reveal-item group inline-flex items-center gap-3 px-6 py-3.5 rounded-full bg-white/85 dark:bg-[#161924]/85 border border-white/90 dark:border-white/15 shadow-[0_14px_36px_rgba(15,23,42,0.11)] dark:shadow-[0_18px_42px_rgba(0,0,0,0.48)] text-[13px] font-semibold text-slate-900 dark:text-white hover:bg-white dark:hover:bg-[#1E2232] active:scale-[0.98] transition-all duration-300 ease-silk cursor-pointer"
         >
           <span>Swipe down to Contact</span>
           <span class="w-6 h-6 rounded-full bg-slate-900/10 dark:bg-white/15 flex items-center justify-center transition-transform duration-500 ease-silk group-hover:translate-y-0.5">
@@ -568,7 +709,7 @@
         tabLabel: "Location",
         badge: "UNIT & OFFICE",
         title: "Unit & Office",
-        addressLine1: "6705 Road no.08 Sachin G.I.D.C.", // Replace with your exact unit / industrial estate address
+        addressLine1: "6705 Road no.08 sachin, G.I.D.C,", // Replace with your exact unit / industrial estate address
         addressLine2: "Surat, Gujarat, India",
         googleMapsUrl: "https://maps.app.goo.gl/wW6VutsNTmBXXdJ7A?g_st=ic", // If cleared (""), auto-uses lat,lng below for Google Maps & Location QR
         lat: 21.0807683,
@@ -1203,7 +1344,7 @@
     ========================================================================= */
     const LogoFluidYarnCanvas = (() => {
       const canvas = document.getElementById('fluid-yarn-canvas');
-      if (!canvas) return { init() {}, triggerTapBloom() {}, setSectionProgress() {} };
+      if (!canvas) return { init() {}, triggerTapBloom() {}, triggerInitialBloom() {}, setSectionProgress() {} };
       const ctx = canvas.getContext('2d');
 
       let width = 0;
@@ -1212,9 +1353,9 @@
       let lastFrameTime = performance.now();
       let elapsedTotal = 0;
       let nextAmbientPlumeAt = 1100;
-
-      // Smooth flow-curve state for thread opacity:
-      // 1.0 on Page 1 (Hero) -> smoothly curves down to 0.0 on Page 2+ (Contacts & QR)
+      let rafId = null;
+      let isPaused = false;
+      const prefersReducedMotion = window.matchMedia && window.matchMedia('(prefers-reduced-motion: reduce)').matches;
       let targetHeroFactor = 1;
       let flowHeroFactor = 1;
 
@@ -1382,7 +1523,8 @@
       }
 
       function resize() {
-        dpr = Math.min(window.devicePixelRatio || 1, 1.75);
+        // Cap DPR at 1.5 for smoother 60fps mobile stability and lower GPU memory
+        dpr = Math.min(window.devicePixelRatio || 1, 1.5);
         width = window.innerWidth;
         height = window.innerHeight;
         canvas.width = Math.round(width * dpr);
@@ -1391,6 +1533,10 @@
       }
 
       function render(now) {
+        if (isPaused) {
+          rafId = null;
+          return;
+        }
         const dtMs = Math.min(40, Math.max(8, now - lastFrameTime));
         lastFrameTime = now;
         elapsedTotal += dtMs;
@@ -1401,7 +1547,7 @@
         const diag = Math.hypot(width, height);
 
         // Gentle ambient dye plume every ~2.5s so glassmorphism subtly glows even while idle
-        if (elapsedTotal >= nextAmbientPlumeAt) {
+        if (!prefersReducedMotion && elapsedTotal >= nextAmbientPlumeAt) {
           nextAmbientPlumeAt = elapsedTotal + 2300 + Math.random() * 1400;
           const ax = width * (0.18 + Math.random() * 0.64);
           const ay = height * (0.20 + Math.random() * 0.60);
@@ -1579,28 +1725,43 @@
           ctx.stroke();
         }
 
-        requestAnimationFrame(render);
+        rafId = requestAnimationFrame(render);
+      }
+
+      function triggerInitialBloom() {
+        if (prefersReducedMotion || !width || !height) return;
+        triggerTapBloom(width * 0.5, height * 0.44);
+      }
+
+      function handleVisibilityChange() {
+        if (document.hidden) {
+          isPaused = true;
+          if (rafId) {
+            cancelAnimationFrame(rafId);
+            rafId = null;
+          }
+        } else if (isPaused) {
+          isPaused = false;
+          lastFrameTime = performance.now();
+          if (!rafId) rafId = requestAnimationFrame(render);
+        }
       }
 
       function bindPassiveListeners() {
-        const shouldSkipDuplicate = (source) => {
+        const onPointerStart = (x, y, source) => {
           const now = performance.now();
-          if (source !== lastInputSource && now - lastInputStamp < 32) return true;
+          if (source === 'mouse' && lastInputSource === 'touch' && now - lastInputStamp < 500) return;
           lastInputSource = source;
           lastInputStamp = now;
-          return false;
-        };
-
-        const handleStart = (x, y, source) => {
-          if (shouldSkipDuplicate(source)) return;
           lastPointerX = x;
           lastPointerY = y;
           hasLastPointer = true;
           triggerTapBloom(x, y);
         };
 
-        const handleMove = (x, y, source, isActive) => {
-          if (shouldSkipDuplicate(source)) return;
+        const onPointerMove = (x, y, source) => {
+          const now = performance.now();
+          if (source === 'mouse' && lastInputSource === 'touch' && now - lastInputStamp < 500) return;
           if (!hasLastPointer) {
             lastPointerX = x;
             lastPointerY = y;
@@ -1609,119 +1770,105 @@
           }
           const dx = x - lastPointerX;
           const dy = y - lastPointerY;
-          const dist = Math.hypot(dx, dy);
-          if (dist >= (isActive ? 9 : 16)) {
+          if (Math.hypot(dx, dy) >= 6) {
             triggerDragPlumes(x, y, dx, dy);
             lastPointerX = x;
             lastPointerY = y;
+            lastInputSource = source;
+            lastInputStamp = now;
           }
         };
 
-        const handleEnd = () => {
-          hasLastPointer = false;
-        };
-
-        window.addEventListener('pointerdown', (e) => {
-          handleStart(e.clientX, e.clientY, 'pointer');
-        }, { passive: true });
-
-        window.addEventListener('pointermove', (e) => {
-          const isPressed = e.buttons > 0 || e.pointerType === 'touch';
-          handleMove(e.clientX, e.clientY, 'pointer', isPressed);
-        }, { passive: true });
-
-        window.addEventListener('pointerup', handleEnd, { passive: true });
-        window.addEventListener('pointercancel', handleEnd, { passive: true });
-
         window.addEventListener('touchstart', (e) => {
           if (e.touches.length > 0) {
-            handleStart(e.touches[0].clientX, e.touches[0].clientY, 'touch');
+            onPointerStart(e.touches[0].clientX, e.touches[0].clientY, 'touch');
           }
         }, { passive: true });
 
         window.addEventListener('touchmove', (e) => {
           if (e.touches.length > 0) {
-            handleMove(e.touches[0].clientX, e.touches[0].clientY, 'touch', true);
+            onPointerMove(e.touches[0].clientX, e.touches[0].clientY, 'touch');
           }
         }, { passive: true });
 
-        window.addEventListener('touchend', handleEnd, { passive: true });
-        window.addEventListener('touchcancel', handleEnd, { passive: true });
+        window.addEventListener('touchend', () => { hasLastPointer = false; }, { passive: true });
+        window.addEventListener('touchcancel', () => { hasLastPointer = false; }, { passive: true });
+
+        window.addEventListener('mousedown', (e) => {
+          if (e.button === 0) onPointerStart(e.clientX, e.clientY, 'mouse');
+        }, { passive: true });
+
+        window.addEventListener('mousemove', (e) => {
+          onPointerMove(e.clientX, e.clientY, 'mouse');
+        }, { passive: true });
+
+        window.addEventListener('mouseup', () => { hasLastPointer = false; }, { passive: true });
       }
 
       function init() {
         buildThreads();
         resize();
         window.addEventListener('resize', resize, { passive: true });
+        if (window.visualViewport) {
+          window.visualViewport.addEventListener('resize', resize, { passive: true });
+        }
+        document.addEventListener('visibilitychange', handleVisibilityChange);
         bindPassiveListeners();
 
-        // Soft initial logo-color bloom so cards immediately catch vivid color refraction
-        setTimeout(() => {
-          triggerTapBloom(width * 0.5, height * 0.44);
-        }, 160);
-
-        requestAnimationFrame(render);
+        lastFrameTime = performance.now();
+        rafId = requestAnimationFrame(render);
       }
 
-      return { init, triggerTapBloom, setSectionProgress };
+      return { init, triggerTapBloom, triggerInitialBloom, setSectionProgress };
     })();
 
     /* =========================================================================
-       7. SECTION 1: HERO & REAL LOGO LOADER (NO FILE INPUT OR UPLOAD BUTTON)
-       Tries ./logo.png -> ./logo.jpg -> ./logo.jpeg -> ./logo.webp.
-       Falls back cleanly to minimal "RC" gradient monogram if file isn't present yet.
+       7. SECTION 1: HERO BRANDING, SPECIALTY PILLS & CLEAN REAL LOGO LOADER
+       Loads ./logo.png directly with zero extra 404 retry requests; displays
+       a clean gradient RC monogram fallback if logo.png is not uploaded yet.
     ========================================================================= */
     function initHeroSection() {
-      document.title = `${CARD_CONFIG.brandName} — NFC Digital Visiting Card`;
-
-      const brandLogo = document.getElementById('brandLogo');
-      const monogram = document.getElementById('brandMonogramFallback');
       const brandNameEl = document.getElementById('hero-brand-name');
+      const qrSubtitleEl = document.getElementById('qr-brand-subtitle');
+      const badgeDotsEl = document.getElementById('hero-badge-dots');
+      const dividerEl = document.getElementById('hero-accent-divider');
       const specialtiesEl = document.getElementById('hero-specialties');
-      const badgeDots = document.getElementById('hero-badge-dots');
-      const divider = document.getElementById('hero-accent-divider');
-      const qrSubtitle = document.getElementById('qr-brand-subtitle');
       const qrPillDot = document.getElementById('qr-pill-dot');
       const toastDot = document.getElementById('toast-dot');
+      const brandLogo = document.getElementById('brandLogo');
+      const monogram = document.getElementById('brandMonogramFallback');
+
+      const colors = CARD_CONFIG.logoColors;
 
       if (brandNameEl) brandNameEl.textContent = CARD_CONFIG.brandName;
-      if (qrSubtitle) qrSubtitle.textContent = CARD_CONFIG.brandName;
-      if (qrPillDot) qrPillDot.style.backgroundColor = CARD_CONFIG.logoColors[0];
-      if (toastDot) toastDot.style.backgroundColor = CARD_CONFIG.logoColors[3];
+      if (qrSubtitleEl) qrSubtitleEl.textContent = CARD_CONFIG.brandName;
+      if (qrPillDot) qrPillDot.style.backgroundColor = colors[0];
+      if (toastDot) toastDot.style.backgroundColor = colors[2];
 
-      if (badgeDots) {
-        badgeDots.innerHTML = [CARD_CONFIG.logoColors[0], CARD_CONFIG.logoColors[2], CARD_CONFIG.logoColors[5]]
-          .map((c) => `<span class="w-1.5 h-1.5 rounded-full" style="background-color:${esc(c)}"></span>`)
+      if (badgeDotsEl) {
+        badgeDotsEl.innerHTML = [colors[0], colors[2], colors[5]]
+          .map((hex) => `<span class="w-1.5 h-1.5 rounded-full" style="background-color:${esc(hex)}"></span>`)
           .join('');
       }
 
-      if (divider) {
-        divider.innerHTML = `
-          <span class="w-10 h-[2px] rounded-full opacity-80" style="background:linear-gradient(90deg,transparent,${esc(CARD_CONFIG.logoColors[0])})"></span>
-          <span class="w-2 h-2 rounded-full" style="background-color:${esc(CARD_CONFIG.logoColors[2])}"></span>
-          <span class="w-10 h-[2px] rounded-full opacity-80" style="background:linear-gradient(270deg,transparent,${esc(CARD_CONFIG.logoColors[5])})"></span>
-        `;
+      if (dividerEl) {
+        dividerEl.innerHTML = colors
+          .map((hex) => `<span class="w-5 h-1 rounded-full" style="background-color:${esc(hex)}"></span>`)
+          .join('');
       }
 
       if (specialtiesEl) {
-        const pillAccents = [CARD_CONFIG.logoColors[0], CARD_CONFIG.logoColors[2], CARD_CONFIG.logoColors[5]];
-        specialtiesEl.innerHTML = CARD_CONFIG.specialties.map((item, idx) => `
-          <span class="inline-flex items-center gap-2 px-3.5 py-1.5 rounded-full bg-white/80 dark:bg-[#161924]/80 border border-white/85 dark:border-white/15 shadow-[0_8px_22px_rgba(15,23,42,0.08)] dark:shadow-[0_10px_24px_rgba(0,0,0,0.42)] text-xs sm:text-[13px] font-semibold text-slate-800 dark:text-slate-100">
-            <span class="w-1.5 h-1.5 rounded-full shrink-0" style="background-color:${esc(pillAccents[idx % pillAccents.length])}"></span>
-            <span>${esc(item)}</span>
-          </span>
-        `).join('');
+        const pillAccents = [colors[0], colors[2], colors[5]];
+        specialtiesEl.innerHTML = CARD_CONFIG.specialties
+          .map((item, idx) => `
+            <span class="relative inline-flex items-center gap-2 px-3.5 py-1.5 rounded-full overflow-hidden text-xs font-semibold text-slate-800 dark:text-slate-100">
+              <span aria-hidden="true" class="glass-surface absolute inset-0 rounded-[inherit] z-0 pointer-events-none bg-[rgba(255,255,255,0.68)] dark:bg-[rgba(18,20,28,0.66)] backdrop-blur-[24px] border border-[rgba(255,255,255,0.82)] dark:border-[rgba(255,255,255,0.16)] shadow-[0_6px_18px_rgba(15,23,42,0.06)] dark:shadow-[0_8px_22px_rgba(0,0,0,0.36)]"></span>
+              <span class="relative z-[1] w-1.5 h-1.5 rounded-full shrink-0" style="background-color:${esc(pillAccents[idx % pillAccents.length])}"></span>
+              <span class="relative z-[1]">${esc(item)}</span>
+            </span>
+          `)
+          .join('');
       }
-
-      // Sequential fallback chain: logoPath -> .jpg -> .jpeg -> .webp -> clean "RC" monogram
-      const fallbackSources = [
-        CARD_CONFIG.logoPath || './logo.png',
-        './logo.jpg',
-        './logo.jpeg',
-        './logo.webp'
-      ].filter((v, i, arr) => arr.indexOf(v) === i);
-
-      let attemptIndex = 0;
 
       function showMonogram() {
         if (brandLogo) {
@@ -1745,26 +1892,19 @@
         tryExtractLogoColors(brandLogo);
       }
 
-      function onLogoFail() {
-        attemptIndex++;
-        if (attemptIndex < fallbackSources.length && brandLogo) {
-          brandLogo.src = fallbackSources[attemptIndex];
-        } else {
-          showMonogram();
-        }
-      }
-
       if (brandLogo) {
+        if (CARD_CONFIG.logoPath && brandLogo.getAttribute('src') !== CARD_CONFIG.logoPath) {
+          brandLogo.src = CARD_CONFIG.logoPath;
+        }
         brandLogo.addEventListener('load', () => {
           if (brandLogo.naturalWidth > 0) onLogoSuccess();
-          else onLogoFail();
+          else showMonogram();
         });
-        brandLogo.addEventListener('error', onLogoFail);
+        brandLogo.addEventListener('error', showMonogram);
 
-        // Handle already-resolved initial src="./logo.png"
         if (brandLogo.complete) {
           if (brandLogo.naturalWidth > 0) onLogoSuccess();
-          else onLogoFail();
+          else showMonogram();
         }
       }
     }
@@ -2207,72 +2347,65 @@
       }
 
       function init() {
-        const cardsMarkup = [
+        const cardsHtml = [
           buildContactCardHtml(CARD_CONFIG.contacts[0], 0, CARD_CONFIG.logoColors[0], CARD_CONFIG.logoColors[1]),
-          buildContactCardHtml(CARD_CONFIG.contacts[1], 1, CARD_CONFIG.logoColors[1], CARD_CONFIG.logoColors[2]),
-          buildLocationCardHtml(CARD_CONFIG.logoColors[2], CARD_CONFIG.logoColors[3])
+          buildContactCardHtml(CARD_CONFIG.contacts[1], 1, CARD_CONFIG.logoColors[2], CARD_CONFIG.logoColors[3]),
+          buildLocationCardHtml(CARD_CONFIG.logoColors[2], CARD_CONFIG.logoColors[1])
         ];
 
-        ringEl.innerHTML = cardsMarkup.map((html, idx) => `
-          <div
-            data-card-index="${idx}"
-            data-front="${idx === 0 ? 'true' : 'false'}"
-            class="absolute top-0 left-0 rounded-[32px] will-change-transform"
-          >
-            ${html}
-          </div>
-        `).join('');
+        ringEl.innerHTML = '';
+        cardNodes = [];
+        contentNodes = [];
 
-        dotsEl.innerHTML = TAB_LABELS.map((label, idx) => `
-          <button
-            type="button"
-            role="tab"
-            aria-label="${esc(label)}"
-            data-dot-index="${idx}"
-          >
-            <span class="w-1.5 h-1.5 rounded-full shrink-0" style="background-color:${esc(TAB_ACCENTS[idx])}"></span>
-            <span>${esc(label)}</span>
-          </button>
-        `).join('');
-
-        cardNodes = Array.from(ringEl.querySelectorAll('[data-card-index]'));
-        contentNodes = cardNodes.map((n) => n.querySelector('.card-content'));
-        dotNodes = Array.from(dotsEl.querySelectorAll('[data-dot-index]'));
-
-        dotNodes.forEach((dot) => {
-          dot.addEventListener('click', () => goToCard(Number(dot.dataset.dotIndex)));
+        cardsHtml.forEach((markup, idx) => {
+          const slot = document.createElement('div');
+          slot.className = 'carousel-card-slot absolute top-0 left-0 will-change-transform origin-center';
+          slot.dataset.cardIndex = String(idx);
+          slot.innerHTML = markup;
+          slot.addEventListener('click', (e) => {
+            if (suppressClick) return;
+            if (slot.dataset.front !== 'true') {
+              e.preventDefault();
+              goToCard(idx);
+            }
+          });
+          ringEl.appendChild(slot);
+          cardNodes.push(slot);
+          contentNodes.push(slot.querySelector('.card-content'));
         });
 
-        ringEl.addEventListener('click', (e) => {
-          if (suppressClick) {
-            e.preventDefault();
+        ringEl.querySelectorAll('[data-save-contact-index]').forEach((btn) => {
+          btn.addEventListener('click', (e) => {
             e.stopPropagation();
-            return;
-          }
-
-          const wrapper = e.target.closest('[data-card-index]');
-          if (!wrapper) return;
-
-          const idx = Number(wrapper.dataset.cardIndex);
-          if (wrapper.dataset.front !== 'true') {
-            e.preventDefault();
-            e.stopPropagation();
-            goToCard(idx);
-            return;
-          }
-
-          const saveBtn = e.target.closest('[data-save-contact-index]');
-          if (saveBtn) {
-            e.preventDefault();
-            const cIdx = Number(saveBtn.dataset.saveContactIndex);
-            const contact = CARD_CONFIG.contacts[cIdx];
+            const idx = Number(btn.getAttribute('data-save-contact-index'));
+            const contact = CARD_CONFIG.contacts[idx];
             if (contact) downloadVCard(contact);
-          }
+          });
         });
 
-        window.addEventListener('resize', computeLayout, { passive: true });
+        if (dotsEl) {
+          dotsEl.innerHTML = '';
+          dotNodes = TAB_LABELS.map((label, idx) => {
+            const btn = document.createElement('button');
+            btn.type = 'button';
+            btn.setAttribute('role', 'tab');
+            btn.setAttribute('aria-selected', idx === 0 ? 'true' : 'false');
+            btn.innerHTML = `
+              <span class="w-1.5 h-1.5 rounded-full shrink-0" style="background-color:${esc(TAB_ACCENTS[idx])}"></span>
+              <span>${esc(label)}</span>
+            `;
+            btn.addEventListener('click', () => goToCard(idx));
+            dotsEl.appendChild(btn);
+            return btn;
+          });
+        }
+
         computeLayout();
         updateIndicators(0);
+        window.addEventListener('resize', computeLayout, { passive: true });
+        if (window.visualViewport) {
+          window.visualViewport.addEventListener('resize', computeLayout, { passive: true });
+        }
       }
 
       return {
@@ -2298,15 +2431,14 @@
       ];
       const heroInner = document.getElementById('hero-inner');
       const qrInner = document.getElementById('qr-inner');
-      const navDots = Array.from(document.querySelectorAll('[data-nav-section]'));
       const carouselStage = document.getElementById('carousel-stage');
+      const navDots = Array.from(document.querySelectorAll('#side-nav-rail [data-nav-section]'));
 
-      const SECTION_COUNT = 3;
+      const SECTION_COUNT = sections.length;
       const TRANSITION_MS = 820;
 
       let currentPos = 0;
       let activeIndex = 0;
-
       let isAnimating = false;
       let animStartPos = 0;
       let animEndPos = 0;
@@ -2569,6 +2701,9 @@
         });
 
         window.addEventListener('resize', applyPositions, { passive: true });
+        if (window.visualViewport) {
+          window.visualViewport.addEventListener('resize', applyPositions, { passive: true });
+        }
         applyPositions();
       }
 
@@ -3198,30 +3333,80 @@
     })();
 
     /* =========================================================================
-       13. APPLICATION BOOTSTRAP
+       13. APPLICATION BOOTSTRAP (FAST INTERACTIVE BOOT + INCOMING REVEAL)
+       Starts immediately on DOM ready once Tailwind styles paint (with a 650ms
+       max safety guard so slow mobile networks never hang).
     ========================================================================= */
-    window.addEventListener('load', () => {
-      SystemTheme.init();
-      initHeroSection();
-      LogoFluidYarnCanvas.init();
-      CarouselOrbit.init();
-      VerticalViewport.init();
-      initQrAndShare();
-      CardImageGenerator.init();
+    (function bootstrapCardApp() {
+      let hasBooted = false;
 
-      document.getElementById('hero-to-contact-btn')?.addEventListener('click', () => {
-        VerticalViewport.goToSection(1);
-      });
-      document.getElementById('cards-to-qr-btn')?.addEventListener('click', () => {
-        VerticalViewport.goToSection(2);
-      });
-      document.getElementById('back-to-top-btn')?.addEventListener('click', () => {
-        VerticalViewport.goToSection(0);
-      });
+      function startApp() {
+        if (hasBooted) return;
+        hasBooted = true;
 
-      document.getElementById('prev-card-btn')?.addEventListener('click', () => CarouselOrbit.stepBy(-1));
-      document.getElementById('next-card-btn')?.addEventListener('click', () => CarouselOrbit.stepBy(1));
-    });
+        SystemTheme.init();
+        initHeroSection();
+        LogoFluidYarnCanvas.init();
+        CarouselOrbit.init();
+        VerticalViewport.init();
+        initQrAndShare();
+        CardImageGenerator.init();
+
+        document.getElementById('hero-to-contact-btn')?.addEventListener('click', () => {
+          VerticalViewport.goToSection(1);
+        });
+        document.getElementById('cards-to-qr-btn')?.addEventListener('click', () => {
+          VerticalViewport.goToSection(2);
+        });
+        document.getElementById('back-to-top-btn')?.addEventListener('click', () => {
+          VerticalViewport.goToSection(0);
+        });
+
+        document.getElementById('prev-card-btn')?.addEventListener('click', () => CarouselOrbit.stepBy(-1));
+        document.getElementById('next-card-btn')?.addEventListener('click', () => CarouselOrbit.stepBy(1));
+
+        // Double-rAF ensures the hidden initial state is painted before launching the incoming reveal
+        requestAnimationFrame(() => {
+          requestAnimationFrame(() => {
+            document.documentElement.classList.add('app-ready');
+            LogoFluidYarnCanvas.triggerInitialBloom();
+
+            // Clean up loader veil & GPU will-change hints once entrance finishes
+            setTimeout(() => {
+              const loader = document.getElementById('intro-loader');
+              if (loader) loader.remove();
+            }, 520);
+
+            setTimeout(() => {
+              document.documentElement.classList.add('reveal-settled');
+            }, 1450);
+          });
+        });
+      }
+
+      function waitForStylesAndBoot() {
+        const startTs = performance.now();
+        const root = document.getElementById('viewport-root');
+
+        function checkStyles() {
+          const tailwindReady = root && window.getComputedStyle(root).overflow === 'hidden';
+          if (tailwindReady || performance.now() - startTs >= 650) {
+            startApp();
+          } else {
+            requestAnimationFrame(checkStyles);
+          }
+        }
+
+        checkStyles();
+      }
+
+      if (document.readyState === 'loading') {
+        document.addEventListener('DOMContentLoaded', waitForStylesAndBoot, { once: true });
+      } else {
+        waitForStylesAndBoot();
+      }
+      window.addEventListener('load', startApp, { once: true });
+    })();
   </script>
 </body>
 </html>
