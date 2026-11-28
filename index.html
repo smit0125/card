@@ -1,394 +1,731 @@
 <!DOCTYPE html>
-<html lang="en" class="dark">
+<html lang="en">
 <head>
   <meta charset="UTF-8" />
-  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
-  <title>Digital Visiting Card — Tap to Connect</title>
-  <meta name="theme-color" content="#0A0A0A" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0, viewport-fit=cover" />
+  <title>RADHE CREATION — NFC Digital Visiting Card</title>
+  <meta id="theme-color-meta" name="theme-color" content="#F6F7FA" />
+  <link rel="apple-touch-icon" href="./logo.png" />
 
   <!-- Google Font: Inter -->
   <link rel="preconnect" href="https://fonts.googleapis.com" />
   <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
-  <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700;800&display=swap" rel="stylesheet" />
+  <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800&display=swap" rel="stylesheet" />
 
-  <!-- Tailwind CSS -->
+  <!-- Immediate System Theme Color Sync (Strict OS-only, zero manual overrides) -->
+  <script>
+    (function () {
+      try {
+        var prefersDark = window.matchMedia && window.matchMedia('(prefers-color-scheme: dark)').matches;
+        var meta = document.getElementById('theme-color-meta');
+        if (meta) meta.setAttribute('content', prefersDark ? '#090A0F' : '#F6F7FA');
+      } catch (e) {}
+    })();
+  </script>
+
+  <!-- Tailwind CSS with strict media-query system dark mode -->
   <script src="https://cdn.tailwindcss.com"></script>
   <script>
     tailwind.config = {
-      darkMode: 'class',
+      darkMode: 'media',
       theme: {
         extend: {
           fontFamily: {
-            sans: ['Inter', 'system-ui', '-apple-system', 'sans-serif'],
+            sans: ['Inter', '-apple-system', 'BlinkMacSystemFont', '"SF Pro Display"', 'system-ui', 'sans-serif'],
           },
           colors: {
-            obsidian: '#0A0A0A',
-            surface: '#141414',
-            gold: {
-              DEFAULT: '#D4AF37',
-              light: '#F3D97E',
-              dark: '#A68623',
-            },
-            whatsapp: '#25D366',
+            canvasLight: '#F6F7FA',
+            canvasDark: '#090A0F',
           },
-          keyframes: {
-            fadeUp: {
-              '0%': { opacity: '0', transform: 'translateY(16px)' },
-              '100%': { opacity: '1', transform: 'translateY(0)' },
-            },
-            ambientFloat: {
-              '0%, 100%': { transform: 'translate(0, 0) scale(1)', opacity: '0.65' },
-              '50%': { transform: 'translate(-12px, 16px) scale(1.08)', opacity: '0.95' },
-            },
-            ambientFloatAlt: {
-              '0%, 100%': { transform: 'translate(0, 0) scale(1)', opacity: '0.5' },
-              '50%': { transform: 'translate(14px, -14px) scale(1.1)', opacity: '0.8' },
-            },
-            shimmerSweep: {
-              '0%': { transform: 'translateX(-120%) skewX(-18deg)' },
-              '100%': { transform: 'translateX(220%) skewX(-18deg)' },
-            },
-            pulseRing: {
-              '0%': { transform: 'scale(0.92)', opacity: '0.7' },
-              '70%': { transform: 'scale(1.22)', opacity: '0' },
-              '100%': { transform: 'scale(1.22)', opacity: '0' },
-            },
-          },
-          animation: {
-            'fade-up': 'fadeUp 0.6s cubic-bezier(0.16, 1, 0.3, 1) both',
-            'ambient-gold': 'ambientFloat 11s ease-in-out infinite',
-            'ambient-emerald': 'ambientFloatAlt 14s ease-in-out infinite',
-            'shimmer': 'shimmerSweep 3.2s ease-in-out infinite',
-            'pulse-ring': 'pulseRing 2.2s cubic-bezier(0.24, 0, 0.38, 1) infinite',
+          transitionTimingFunction: {
+            silk: 'cubic-bezier(0.16, 1, 0.3, 1)',
           },
         },
       },
     };
   </script>
 </head>
-<body class="bg-obsidian text-neutral-100 font-sans antialiased selection:bg-gold/30 selection:text-gold-light min-h-screen overflow-x-hidden relative">
+<body class="bg-canvasLight dark:bg-canvasDark text-slate-900 dark:text-slate-100 font-sans antialiased overflow-hidden select-none transition-colors duration-700 ease-silk">
 
-  <!-- Ambient Background Radial Glows -->
-  <div aria-hidden="true" class="fixed inset-0 overflow-hidden pointer-events-none z-0">
-    <div class="absolute -top-28 -right-24 w-80 h-80 rounded-full bg-gold/[0.11] blur-[100px] animate-ambient-gold"></div>
-    <div class="absolute top-1/2 -left-28 w-72 h-72 rounded-full bg-whatsapp/[0.07] blur-[110px] animate-ambient-emerald"></div>
-    <div class="absolute -bottom-24 right-4 w-72 h-72 rounded-full bg-gold/[0.08] blur-[100px] animate-ambient-gold"></div>
+  <!-- =========================================================================
+       FIXED FULLSCREEN CANVAS: LOGO-COLOR TOUCH FLUID + 32 RANDOM 360° THREADS
+       Strictly pointer-events-none so swiping, scrolling, and taps never block.
+  ========================================================================= -->
+  <div aria-hidden="true" class="fixed inset-0 z-0 pointer-events-none overflow-hidden">
+    <canvas id="fluid-yarn-canvas" class="block w-full h-full"></canvas>
   </div>
 
-  <!-- Main Mobile-First Container (Centered Card Hub) -->
-  <main class="relative z-10 w-full max-w-[440px] mx-auto px-4 pt-7 pb-28">
+  <!-- =========================================================================
+       RIGHT-EDGE 3-SECTION NAVIGATION INDICATOR RAIL
+       Strictly uses unbroken two-sibling glassmorphism.
+  ========================================================================= -->
+  <nav
+    aria-label="Page sections"
+    class="fixed right-3 sm:right-5 top-1/2 -translate-y-1/2 z-40 rounded-full py-2.5 px-1.5 overflow-hidden"
+  >
+    <div
+      aria-hidden="true"
+      class="glass-surface absolute inset-0 rounded-[inherit] z-0 pointer-events-none bg-[rgba(255,255,255,0.62)] dark:bg-[rgba(18,20,28,0.60)] backdrop-blur-[32px] backdrop-saturate-[185%] border border-[rgba(255,255,255,0.78)] dark:border-[rgba(255,255,255,0.18)] shadow-[0_12px_30px_rgba(15,23,42,0.10),inset_0_1px_0_rgba(255,255,255,0.9)] dark:shadow-[0_14px_34px_rgba(0,0,0,0.46),inset_0_1px_0_rgba(255,255,255,0.18)]"
+    ></div>
+    <div class="relative z-[1] flex flex-col items-center gap-2.5">
+      <button type="button" data-nav-section="0" aria-label="Brand Hero" class="w-1.5 h-6 rounded-full bg-slate-900 dark:bg-white transition-all duration-500 ease-silk cursor-pointer"></button>
+      <button type="button" data-nav-section="1" aria-label="Contacts and Location" class="w-1.5 h-1.5 rounded-full bg-slate-900/25 dark:bg-white/25 hover:bg-slate-900/50 dark:hover:bg-white/50 transition-all duration-500 ease-silk cursor-pointer"></button>
+      <button type="button" data-nav-section="2" aria-label="QR Code and Share Link" class="w-1.5 h-1.5 rounded-full bg-slate-900/25 dark:bg-white/25 hover:bg-slate-900/50 dark:hover:bg-white/50 transition-all duration-500 ease-silk cursor-pointer"></button>
+    </div>
+  </nav>
 
-    <!-- 1. Brand / Profile Header (Rendered Dynamically) -->
-    <header id="brand-header" class="text-center mb-7 animate-fade-up" style="animation-delay: 40ms;"></header>
+  <!-- =========================================================================
+       3 FULL-VIEWPORT VERTICAL SCREENS (ZERO-BOUNCE EASE-OUT-QUART MOTION)
+       CRITICAL GLASSMORPHISM ARCHITECTURE:
+       - ZERO transform-style: preserve-3d anywhere.
+       - NEVER apply filter: blur() to any ancestor or element holding backdrop-filter.
+       - Blur during horizontal/vertical motion is applied ONLY to `.hero-inner`,
+         `.card-content`, and `.qr-inner`.
+  ========================================================================= -->
+  <main id="viewport-root" class="relative z-10 w-full h-[100dvh] overflow-hidden">
 
-    <!-- 2. Direct Contacts Section (2 Full Contact Cards) -->
-    <section aria-labelledby="contacts-heading" class="mb-7">
-      <div class="flex items-center justify-between px-1 mb-3 animate-fade-up" style="animation-delay: 120ms;">
-        <h2 id="contacts-heading" class="text-[11px] font-semibold uppercase tracking-[0.18em] text-gold/90 flex items-center gap-2">
-          <span class="w-4 h-[1px] bg-gold/60 inline-block"></span>
-          Direct Contacts
-        </h2>
-        <span class="text-[11px] text-neutral-500">Tap to call or save</span>
+    <!-- =====================================================================
+         SECTION 1: BRAND HERO
+         Centered white squircle logo emblem (./logo.png), bold RADHE CREATION,
+         3 glass specialty pills, and Swipe down to Contact button.
+    ===================================================================== -->
+    <section
+      id="section-hero"
+      data-section-index="0"
+      class="fixed inset-0 w-full h-[100dvh] flex items-center justify-center px-5 will-change-transform"
+    >
+      <div
+        id="hero-inner"
+        class="hero-inner w-full max-w-lg h-full flex flex-col items-center justify-between pt-10 pb-8 sm:pt-14 sm:pb-11 will-change-[filter,transform,opacity] origin-center"
+      >
+        <!-- Top Brand Tag -->
+        <div class="inline-flex items-center gap-2.5 px-4 py-1.5 rounded-full bg-white/80 dark:bg-[#161924]/80 border border-white/85 dark:border-white/15 shadow-[0_10px_28px_rgba(15,23,42,0.08)] dark:shadow-[0_12px_30px_rgba(0,0,0,0.44)]">
+          <span id="hero-badge-dots" class="inline-flex items-center gap-1"></span>
+          <span class="text-[11px] font-semibold uppercase tracking-[0.2em] text-slate-700 dark:text-slate-200">
+            NFC Digital Card
+          </span>
+        </div>
+
+        <!-- Center Brand Identity -->
+        <div class="flex flex-col items-center text-center my-auto px-2 w-full">
+          <!-- Crisp 116x116 White Rounded Squircle Logo Emblem (No upload buttons) -->
+          <div
+            class="w-[116px] h-[116px] rounded-[28px] bg-white p-3 shadow-[0_22px_52px_rgba(15,23,42,0.12)] dark:shadow-[0_24px_60px_rgba(0,0,0,0.56)] border border-slate-200/80 dark:border-white/20 flex items-center justify-center mb-7 overflow-hidden"
+          >
+            <img
+              id="brandLogo"
+              src="./logo.png"
+              alt="Radhe Creation Logo"
+              class="w-full h-full object-contain block"
+            />
+            <!-- Clean minimal typographic monogram fallback shown ONLY if no logo file exists yet -->
+            <div
+              id="brandMonogramFallback"
+              aria-hidden="true"
+              class="hidden w-full h-full items-center justify-center select-none"
+            >
+              <span
+                class="text-4xl font-extrabold tracking-tight bg-clip-text text-transparent"
+                style="background-image: linear-gradient(135deg, #E91E63 0%, #8B5CF6 28%, #06B6D4 56%, #22C55E 78%, #F97316 100%);"
+              >
+                RC
+              </span>
+            </div>
+          </div>
+
+          <!-- Bold Brand Name -->
+          <h1
+            id="hero-brand-name"
+            class="text-3xl sm:text-5xl font-extrabold tracking-[0.07em] uppercase text-slate-900 dark:text-white leading-[1.1]"
+          >
+            RADHE CREATION
+          </h1>
+
+          <!-- Spectrum Divider -->
+          <div id="hero-accent-divider" aria-hidden="true" class="flex items-center gap-2 my-4"></div>
+
+          <!-- 3 Glass Pill Tags for Key Specialties -->
+          <div id="hero-specialties" class="flex flex-wrap items-center justify-center gap-2 max-w-md">
+            <!-- Populated from CARD_CONFIG.specialties -->
+          </div>
+
+          <!-- Subtle Touch Cue -->
+          <p class="mt-5 text-[11px] font-medium tracking-[0.14em] uppercase text-slate-500 dark:text-slate-400">
+            trust is valuable then price
+          </p>
+        </div>
+
+        <!-- Interactive Swipe Down to Contact Button -->
+        <button
+          id="hero-to-contact-btn"
+          type="button"
+          class="group inline-flex items-center gap-3 px-6 py-3.5 rounded-full bg-white/85 dark:bg-[#161924]/85 border border-white/90 dark:border-white/15 shadow-[0_14px_36px_rgba(15,23,42,0.11)] dark:shadow-[0_18px_42px_rgba(0,0,0,0.48)] text-[13px] font-semibold text-slate-900 dark:text-white hover:bg-white dark:hover:bg-[#1E2232] active:scale-[0.98] transition-all duration-300 ease-silk cursor-pointer"
+        >
+          <span>Swipe down to Contact</span>
+          <span class="w-6 h-6 rounded-full bg-slate-900/10 dark:bg-white/15 flex items-center justify-center transition-transform duration-500 ease-silk group-hover:translate-y-0.5">
+            <svg class="w-3.5 h-3.5" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2.4">
+              <path stroke-linecap="round" stroke-linejoin="round" d="M19 9l-7 7-7-7" />
+            </svg>
+          </span>
+        </button>
       </div>
-      <div id="contacts-container" class="space-y-3.5"></div>
     </section>
 
-    <!-- 3. WhatsApp Direct Options Section -->
-    <section aria-labelledby="whatsapp-heading" class="mb-7">
-      <div class="flex items-center justify-between px-1 mb-3 animate-fade-up" style="animation-delay: 260ms;">
-        <h2 id="whatsapp-heading" class="text-[11px] font-semibold uppercase tracking-[0.18em] text-whatsapp/90 flex items-center gap-2">
-          <span class="w-4 h-[1px] bg-whatsapp/60 inline-block"></span>
-          WhatsApp Direct
-        </h2>
-        <span class="text-[11px] text-neutral-500">Instant chat</span>
+    <!-- =====================================================================
+         SECTION 2: 3-CARD 3D CIRCULAR GLASSMORPHISM CAROUSEL
+         - Arranged 120° apart on a horizontal circular orbit.
+         - ZERO transform-style: preserve-3d, ZERO transparency cuts.
+         - Subtle left/right tap zones + pagination pills + swipe/drag.
+    ===================================================================== -->
+    <section
+      id="section-cards"
+      data-section-index="1"
+      class="fixed inset-0 w-full h-[100dvh] flex items-center justify-center overflow-hidden will-change-transform"
+    >
+      <div class="w-full h-full flex flex-col items-center justify-between pt-8 pb-5 sm:pt-10 sm:pb-7 px-4">
+        <!-- Top Active Card Indicator Pill -->
+        <header class="w-full max-w-4xl mx-auto flex items-center justify-center">
+          <div class="relative rounded-full px-4 py-1.5 overflow-hidden">
+            <div
+              aria-hidden="true"
+              class="glass-surface absolute inset-0 rounded-[inherit] z-0 pointer-events-none bg-[rgba(255,255,255,0.62)] dark:bg-[rgba(18,20,28,0.60)] backdrop-blur-[32px] backdrop-saturate-[185%] border border-[rgba(255,255,255,0.78)] dark:border-[rgba(255,255,255,0.18)] shadow-[0_10px_28px_rgba(15,23,42,0.08),inset_0_1px_0_rgba(255,255,255,0.9)] dark:shadow-[0_12px_30px_rgba(0,0,0,0.44),inset_0_1px_0_rgba(255,255,255,0.18)]"
+            ></div>
+            <div class="relative z-[1] inline-flex items-center gap-2">
+              <span id="carousel-active-dot" class="w-2 h-2 rounded-full"></span>
+              <span id="carousel-active-label" class="text-xs font-semibold tracking-wide text-slate-900 dark:text-white">
+                Founder
+              </span>
+            </div>
+          </div>
+        </header>
+
+        <!-- Circular Orbit Stage -->
+        <div
+          id="carousel-stage"
+          aria-label="Contacts and Location Carousel"
+          class="relative flex-1 w-full max-w-5xl flex items-center justify-center cursor-grab active:cursor-grabbing my-1"
+        >
+          <!-- Subtle Edge Tap Zones (Mobile + Desktop quick previous/next) -->
+          <button
+            id="prev-card-btn"
+            type="button"
+            aria-label="Previous card"
+            class="group absolute left-0 sm:left-3 lg:left-6 top-1/2 -translate-y-1/2 z-[180] w-11 sm:w-12 h-40 sm:h-12 flex items-center justify-center rounded-full cursor-pointer focus:outline-none"
+          >
+            <span class="hidden sm:flex relative w-12 h-12 rounded-full items-center justify-center overflow-hidden text-slate-900 dark:text-white group-hover:scale-[1.05] active:scale-95 transition-transform duration-300 ease-silk">
+              <span aria-hidden="true" class="glass-surface absolute inset-0 rounded-[inherit] z-0 pointer-events-none bg-[rgba(255,255,255,0.62)] dark:bg-[rgba(18,20,28,0.60)] backdrop-blur-[32px] backdrop-saturate-[185%] border border-[rgba(255,255,255,0.78)] dark:border-[rgba(255,255,255,0.18)] shadow-[0_12px_28px_rgba(15,23,42,0.10)] dark:shadow-[0_14px_32px_rgba(0,0,0,0.46)]"></span>
+              <svg class="relative z-[1] w-5 h-5" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2.1">
+                <path stroke-linecap="round" stroke-linejoin="round" d="M15 19l-7-7 7-7" />
+              </svg>
+            </span>
+          </button>
+
+          <button
+            id="next-card-btn"
+            type="button"
+            aria-label="Next card"
+            class="group absolute right-0 sm:right-3 lg:right-6 top-1/2 -translate-y-1/2 z-[180] w-11 sm:w-12 h-40 sm:h-12 flex items-center justify-center rounded-full cursor-pointer focus:outline-none"
+          >
+            <span class="hidden sm:flex relative w-12 h-12 rounded-full items-center justify-center overflow-hidden text-slate-900 dark:text-white group-hover:scale-[1.05] active:scale-95 transition-transform duration-300 ease-silk">
+              <span aria-hidden="true" class="glass-surface absolute inset-0 rounded-[inherit] z-0 pointer-events-none bg-[rgba(255,255,255,0.62)] dark:bg-[rgba(18,20,28,0.60)] backdrop-blur-[32px] backdrop-saturate-[185%] border border-[rgba(255,255,255,0.78)] dark:border-[rgba(255,255,255,0.18)] shadow-[0_12px_28px_rgba(15,23,42,0.10)] dark:shadow-[0_14px_32px_rgba(0,0,0,0.46)]"></span>
+              <svg class="relative z-[1] w-5 h-5" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2.1">
+                <path stroke-linecap="round" stroke-linejoin="round" d="M9 5l7 7-7 7" />
+              </svg>
+            </span>
+          </button>
+
+          <!-- Orbit Container Holding the 3 Glassmorphism Cards -->
+          <div id="carousel-ring" class="relative">
+            <!-- Populated from CARD_CONFIG -->
+          </div>
+        </div>
+
+        <!-- Bottom Controls: Pagination Pills & Swipe Down Cue -->
+        <div class="w-full max-w-md mx-auto flex flex-col items-center text-center gap-2 z-[200]">
+          <div class="relative rounded-full p-1 overflow-hidden">
+            <div
+              aria-hidden="true"
+              class="glass-surface absolute inset-0 rounded-[inherit] z-0 pointer-events-none bg-[rgba(255,255,255,0.62)] dark:bg-[rgba(18,20,28,0.60)] backdrop-blur-[32px] backdrop-saturate-[185%] border border-[rgba(255,255,255,0.78)] dark:border-[rgba(255,255,255,0.18)] shadow-[0_8px_24px_rgba(15,23,42,0.08)] dark:shadow-[0_10px_28px_rgba(0,0,0,0.44)]"
+            ></div>
+            <div id="carousel-dots" role="tablist" aria-label="Select card" class="relative z-[1] inline-flex items-center justify-center gap-1"></div>
+          </div>
+
+          <button
+            id="cards-to-qr-btn"
+            type="button"
+            class="relative rounded-full px-4 py-2 overflow-hidden active:scale-[0.98] transition-transform duration-300 ease-silk cursor-pointer"
+          >
+            <span
+              aria-hidden="true"
+              class="glass-surface absolute inset-0 rounded-[inherit] z-0 pointer-events-none bg-[rgba(255,255,255,0.62)] dark:bg-[rgba(18,20,28,0.60)] backdrop-blur-[32px] backdrop-saturate-[185%] border border-[rgba(255,255,255,0.78)] dark:border-[rgba(255,255,255,0.18)] shadow-[0_8px_22px_rgba(15,23,42,0.08)] dark:shadow-[0_10px_26px_rgba(0,0,0,0.44)]"
+            ></span>
+            <span class="relative z-[1] inline-flex items-center gap-2 text-xs font-semibold text-slate-800 dark:text-slate-100">
+              <span>Swipe down for QR &amp; Share</span>
+              <svg class="w-3.5 h-3.5" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2.3">
+                <path stroke-linecap="round" stroke-linejoin="round" d="M19 9l-7 7-7-7" />
+              </svg>
+            </span>
+          </button>
+        </div>
       </div>
-      <div id="whatsapp-container" class="space-y-2.5"></div>
     </section>
 
-    <!-- 4. Instagram Options Section -->
-    <section aria-labelledby="instagram-heading" class="mb-7">
-      <div class="flex items-center justify-between px-1 mb-3 animate-fade-up" style="animation-delay: 340ms;">
-        <h2 id="instagram-heading" class="text-[11px] font-semibold uppercase tracking-[0.18em] text-pink-400/90 flex items-center gap-2">
-          <span class="w-4 h-[1px] bg-gradient-to-r from-[#f09433] via-[#dc2743] to-[#bc1888] inline-block"></span>
-          Instagram
-        </h2>
-        <span class="text-[11px] text-neutral-500">Follow our updates</span>
-      </div>
-      <div id="instagram-container" class="space-y-2.5"></div>
-    </section>
+    <!-- =====================================================================
+         SECTION 3: EMBEDDED PURE-JS QR CODE, SAVE CARD TO GALLERY & SHARE
+         - Strictly two-sibling glassmorphism card (.glass-surface + .qr-inner).
+         - Zero external QR library dependencies.
+    ===================================================================== -->
+    <section
+      id="section-qr"
+      data-section-index="2"
+      class="fixed inset-0 w-full h-[100dvh] flex items-center justify-center px-5 will-change-transform"
+    >
+      <div class="w-full max-w-[408px] h-full flex flex-col items-center justify-between pt-6 pb-5 sm:pt-9 sm:pb-8">
+        <!-- Top Pill -->
+        <div class="relative rounded-full px-4 py-1.5 overflow-hidden">
+          <div
+            aria-hidden="true"
+            class="glass-surface absolute inset-0 rounded-[inherit] z-0 pointer-events-none bg-[rgba(255,255,255,0.62)] dark:bg-[rgba(18,20,28,0.60)] backdrop-blur-[32px] backdrop-saturate-[185%] border border-[rgba(255,255,255,0.78)] dark:border-[rgba(255,255,255,0.18)] shadow-[0_8px_22px_rgba(15,23,42,0.08)] dark:shadow-[0_10px_26px_rgba(0,0,0,0.44)]"
+          ></div>
+          <div class="relative z-[1] inline-flex items-center gap-2">
+            <span id="qr-pill-dot" class="w-1.5 h-1.5 rounded-full"></span>
+            <span class="text-[11px] font-semibold uppercase tracking-[0.18em] text-slate-800 dark:text-slate-100">
+              Scan &amp; Save
+            </span>
+          </div>
+        </div>
 
-    <!-- 5. Additional Details & Share Section -->
-    <section aria-labelledby="more-heading" class="mb-8">
-      <div class="flex items-center justify-between px-1 mb-3 animate-fade-up" style="animation-delay: 420ms;">
-        <h2 id="more-heading" class="text-[11px] font-semibold uppercase tracking-[0.18em] text-neutral-400 flex items-center gap-2">
-          <span class="w-4 h-[1px] bg-neutral-600 inline-block"></span>
-          More Ways to Connect
-        </h2>
-      </div>
-      <div id="additional-container" class="space-y-2.5"></div>
-    </section>
+        <!-- Unbroken Frosted Glassmorphism QR, Save Card Image & Share Card -->
+        <article class="glass-card relative w-full my-auto rounded-[32px] overflow-hidden">
+          <!-- Sibling 1: Uniform Frosted Glass Surface (NEVER blurred via filter) -->
+          <div
+            aria-hidden="true"
+            class="glass-surface absolute inset-0 rounded-[inherit] z-0 pointer-events-none bg-[rgba(255,255,255,0.62)] dark:bg-[rgba(18,20,28,0.60)] backdrop-blur-[32px] backdrop-saturate-[185%] border border-[rgba(255,255,255,0.78)] dark:border-[rgba(255,255,255,0.18)] shadow-[0_22px_54px_rgba(15,23,42,0.10),inset_0_1px_0_rgba(255,255,255,0.92)] dark:shadow-[0_24px_60px_rgba(0,0,0,0.48),inset_0_1px_0_rgba(255,255,255,0.20)]"
+          ></div>
 
-    <!-- Subtle Footer -->
-    <footer id="card-footer" class="text-center pt-2 pb-4 animate-fade-up" style="animation-delay: 500ms;"></footer>
+          <!-- Sibling 2: Inner Content Layer (vertical blur applied strictly here) -->
+          <div id="qr-inner" class="qr-inner relative z-[1] p-5 sm:p-6 text-center will-change-[filter,opacity]">
+            <h2 class="text-lg sm:text-xl font-extrabold tracking-tight text-slate-900 dark:text-white">
+              Share &amp; Save Card
+            </h2>
+            <p id="qr-brand-subtitle" class="text-[11px] font-semibold tracking-wider uppercase text-slate-600 dark:text-slate-300 mt-0.5">
+              RADHE CREATION
+            </p>
+
+            <!-- High-Contrast White QR Plate for Instant Camera Scanning -->
+            <div class="mt-3.5 mb-3.5 mx-auto w-fit p-3 rounded-[22px] bg-white shadow-[0_14px_34px_rgba(15,23,42,0.14)] border border-slate-200/80">
+              <canvas
+                id="qr-canvas"
+                aria-label="QR Code for Radhe Creation Digital Visiting Card"
+                class="block w-[148px] h-[148px] sm:w-[172px] sm:h-[172px] rounded-lg"
+              ></canvas>
+            </div>
+
+            <!-- Copyable Page Link Bar -->
+            <div class="text-left">
+              <div class="flex items-center gap-2 p-1.5 pl-3.5 rounded-2xl bg-white/75 dark:bg-white/[0.09] border border-slate-900/[0.08] dark:border-white/[0.14]">
+                <a
+                  id="share-url-link"
+                  href="https://smit0125.github.io/card/"
+                  target="_blank"
+                  rel="noopener noreferrer"
+                  class="flex-1 text-xs font-mono font-semibold text-slate-900 dark:text-white hover:underline truncate"
+                >
+                  smit0125.github.io/card/
+                </a>
+                <button
+                  id="copy-link-btn"
+                  type="button"
+                  class="shrink-0 inline-flex items-center gap-1.5 px-3 py-2 rounded-xl bg-slate-900 hover:bg-slate-800 dark:bg-white dark:hover:bg-slate-100 text-white dark:text-slate-900 text-xs font-bold active:scale-[0.97] transition-all duration-300 ease-silk cursor-pointer"
+                >
+                  <svg class="w-3.5 h-3.5" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2.1">
+                    <path stroke-linecap="round" stroke-linejoin="round" d="M8 16H6a2 2 0 01-2-2V6a2 2 0 012-2h8a2 2 0 012 2v2m-6 12h8a2 2 0 002-2v-8a2 2 0 00-2-2h-8a2 2 0 00-2 2v8a2 2 0 002 2z" />
+                  </svg>
+                  <span id="copy-btn-label">Copy</span>
+                </button>
+              </div>
+            </div>
+
+            <!-- Primary CTA: Save High-Res Visiting Card Image to Gallery -->
+            <button
+              id="open-save-card-btn"
+              type="button"
+              class="mt-3 w-full flex items-center justify-center gap-2.5 py-3.5 px-4 rounded-2xl bg-slate-900 hover:bg-slate-800 dark:bg-white dark:hover:bg-slate-100 text-white dark:text-slate-900 text-[13px] font-bold shadow-[0_12px_28px_rgba(15,23,42,0.24)] dark:shadow-[0_12px_28px_rgba(255,255,255,0.16)] active:scale-[0.98] transition-all duration-300 ease-silk cursor-pointer"
+            >
+              <svg class="w-4 h-4 shrink-0" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2.2">
+                <path stroke-linecap="round" stroke-linejoin="round" d="M4 16l4.586-4.586a2 2 0 012.828 0L16 16m-2-2l1.586-1.586a2 2 0 012.828 0L20 14m-6-6h.01M6 20h12a2 2 0 002-2V6a2 2 0 00-2-2H6a2 2 0 00-2 2v12a2 2 0 002 2z" />
+              </svg>
+              <span>Save Card to Gallery</span>
+            </button>
+
+            <!-- Secondary Actions: Native Share Page + Share on WhatsApp -->
+            <div class="mt-2.5 grid grid-cols-2 gap-2.5">
+              <button
+                id="share-page-btn"
+                type="button"
+                class="flex items-center justify-center gap-2 py-3 px-3 rounded-2xl bg-white/80 hover:bg-white dark:bg-white/[0.11] dark:hover:bg-white/[0.17] border border-slate-900/[0.08] dark:border-white/[0.15] text-slate-900 dark:text-white text-xs font-bold active:scale-[0.98] transition-all duration-300 ease-silk cursor-pointer"
+              >
+                <svg class="w-4 h-4 shrink-0" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2.2">
+                  <path stroke-linecap="round" stroke-linejoin="round" d="M8.684 13.342C8.886 12.938 9 12.482 9 12c0-.482-.114-.938-.316-1.342m0 2.684a3 3 0 110-2.684m0 2.684l6.632 3.316m-6.632-6l6.632-3.316m0 0a3 3 0 105.367-2.684 3 3 0 00-5.367 2.684zm0 9.316a3 3 0 105.368 2.684 3 3 0 00-5.368-2.684z" />
+                </svg>
+                <span>Share Page</span>
+              </button>
+
+              <a
+                id="share-whatsapp-btn"
+                href="#"
+                target="_blank"
+                rel="noopener noreferrer"
+                class="flex items-center justify-center gap-2 py-3 px-3 rounded-2xl bg-[#22C55E] hover:bg-[#16A34A] text-white text-xs font-bold shadow-[0_10px_24px_rgba(34,197,94,0.34)] active:scale-[0.98] transition-all duration-300 ease-silk"
+              >
+                <svg class="w-4 h-4 shrink-0" viewBox="0 0 24 24" fill="currentColor">
+                  <path d="M12.031 2C6.502 2 2 6.502 2 12.031c0 1.766.461 3.49 1.337 5.012L2 22l5.095-1.336a9.99 9.99 0 004.936 1.298h.004c5.529 0 10.031-4.502 10.031-10.031S17.56 2 12.031 2zm5.847 14.242c-.246.693-1.434 1.326-1.99 1.409-.513.076-1.164.108-1.882-.12-.436-.139-.997-.324-1.718-.635-3.025-1.307-5-4.365-5.151-4.566-.15-.201-1.229-1.636-1.229-3.12 0-1.484.777-2.214 1.053-2.516.276-.301.602-.377.803-.377.2 0 .401.002.577.011.185.009.433-.07.677.517.251.603.854 2.087.929 2.238.075.151.125.327.025.528-.1.201-.151.327-.301.503-.151.176-.317.393-.452.528-.151.15-.308.314-.132.616.176.301.782 1.29 1.679 2.089 1.154 1.029 2.126 1.348 2.427 1.499.301.151.477.126.652-.075.176-.201.753-.879.954-1.18.201-.301.401-.251.677-.151.276.101 1.756.828 2.057.979.301.151.502.226.577.352.075.125.075.728-.171 1.421z"/>
+                </svg>
+                <span>WhatsApp</span>
+              </a>
+            </div>
+          </div>
+        </article>
+
+        <!-- Back to Top Button -->
+        <button
+          id="back-to-top-btn"
+          type="button"
+          class="relative rounded-full px-4 py-2 overflow-hidden active:scale-[0.98] transition-transform duration-300 ease-silk cursor-pointer"
+        >
+          <span
+            aria-hidden="true"
+            class="glass-surface absolute inset-0 rounded-[inherit] z-0 pointer-events-none bg-[rgba(255,255,255,0.62)] dark:bg-[rgba(18,20,28,0.60)] backdrop-blur-[32px] backdrop-saturate-[185%] border border-[rgba(255,255,255,0.78)] dark:border-[rgba(255,255,255,0.18)] shadow-[0_8px_22px_rgba(15,23,42,0.08)] dark:shadow-[0_10px_26px_rgba(0,0,0,0.44)]"
+          ></span>
+          <span class="relative z-[1] inline-flex items-center gap-2 text-xs font-semibold text-slate-900 dark:text-white">
+            <span>Back to Top</span>
+            <svg class="w-3.5 h-3.5" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2.4">
+              <path stroke-linecap="round" stroke-linejoin="round" d="M5 10l7-7m0 0l7 7m-7-7v18" />
+            </svg>
+          </span>
+        </button>
+      </div>
+    </section>
   </main>
 
-  <!-- Floating Bottom Action Dock (Share + Backup QR Code) -->
-  <div class="fixed bottom-4 left-0 right-0 z-30 flex justify-center px-4 pointer-events-none">
-    <div class="pointer-events-auto flex items-center gap-2 p-1.5 rounded-full bg-surface/90 backdrop-blur-xl border border-white/[0.1] shadow-[0_12px_40px_rgba(0,0,0,0.75)]">
-      <button
-        id="dock-share-btn"
-        type="button"
-        class="flex items-center gap-2 px-4 py-2.5 rounded-full text-xs font-semibold text-neutral-200 hover:text-white hover:bg-white/[0.07] active:scale-95 transition-all"
-      >
-        <svg class="w-4 h-4 text-gold" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2">
-          <path stroke-linecap="round" stroke-linejoin="round" d="M8.684 13.342C8.886 12.938 9 12.482 9 12c0-.482-.114-.938-.316-1.342m0 2.684a3 3 0 110-2.684m0 2.684l6.632 3.316m-6.632-6l6.632-3.316m0 0a3 3 0 105.367-2.684 3 3 0 00-5.367 2.684zm0 9.316a3 3 0 105.368 2.684 3 3 0 00-5.368-2.684z" />
-        </svg>
-        Share Card
-      </button>
-      <span class="w-[1px] h-5 bg-white/10"></span>
-      <button
-        id="dock-qr-btn"
-        type="button"
-        class="flex items-center gap-2 px-4 py-2.5 rounded-full text-xs font-semibold bg-gradient-to-r from-gold via-gold-light to-gold text-obsidian shadow-[0_0_20px_rgba(212,175,55,0.28)] hover:brightness-110 active:scale-95 transition-all"
-      >
-        <svg class="w-4 h-4" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2.2">
-          <path stroke-linecap="round" stroke-linejoin="round" d="M3 3h6v6H3V3zm12 0h6v6h-6V3zM3 15h6v6H3v-6zm13 0h2v2h-2v-2zm3 0h2v2h-2v-2zm-3 3h2v3h-2v-3zm3 2h2v1h-2v-1zm-6-5h2v2h-2v-2zm0 4h2v2h-2v-2z" />
-        </svg>
-        Show QR Code
-      </button>
-    </div>
-  </div>
-
-  <!-- Backup QR Code Modal -->
+  <!-- =========================================================================
+       HIGH-RES VISITING CARD PNG PREVIEW & SAVE-TO-GALLERY MODAL
+       - Displays the generated 1600x960 visiting card (Logo + RADHE CREATION +
+         2 Contacts + Scannable Location QR Code).
+       - Supports iOS/Android native Web Share (Save Image to Photos), direct
+         PNG download, and universal long-press Save to Photos.
+  ========================================================================= -->
   <div
-    id="qr-modal"
+    id="card-save-modal"
     role="dialog"
     aria-modal="true"
-    aria-labelledby="qr-modal-title"
-    class="fixed inset-0 z-50 hidden items-center justify-center p-4 bg-black/80 backdrop-blur-md transition-opacity duration-200 opacity-0"
+    aria-labelledby="save-modal-title"
+    class="fixed inset-0 z-50 hidden items-center justify-center p-4 sm:p-6"
   >
-    <div id="qr-modal-card" class="relative w-full max-w-[360px] rounded-3xl bg-surface border border-gold/25 p-6 shadow-[0_24px_80px_rgba(0,0,0,0.85)] transform scale-95 transition-transform duration-200">
-      <!-- Close Button -->
-      <button
-        id="qr-close-btn"
-        type="button"
-        aria-label="Close QR Modal"
-        class="absolute top-4 right-4 w-9 h-9 rounded-full bg-white/[0.06] hover:bg-white/[0.12] border border-white/10 flex items-center justify-center text-neutral-300 active:scale-90 transition-all"
-      >
-        <svg class="w-4 h-4" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2.2">
-          <path stroke-linecap="round" stroke-linejoin="round" d="M6 18L18 6M6 6l12 12" />
-        </svg>
-      </button>
+    <!-- Dimmed Frosted Backdrop -->
+    <div
+      id="card-modal-backdrop"
+      class="absolute inset-0 bg-slate-950/65 backdrop-blur-md transition-opacity duration-300"
+    ></div>
 
-      <!-- Modal Header -->
-      <div class="text-center mb-5">
-        <div class="inline-flex items-center gap-1.5 px-3 py-1 rounded-full bg-gold/10 border border-gold/25 text-gold-light text-[10px] font-semibold uppercase tracking-widest mb-2.5">
-          Backup Scan
+    <!-- Unbroken Two-Layer Frosted Glass Modal Container -->
+    <div class="relative z-[1] w-full max-w-xl rounded-[30px] overflow-hidden">
+      <div
+        aria-hidden="true"
+        class="glass-surface absolute inset-0 rounded-[inherit] z-0 pointer-events-none bg-[rgba(255,255,255,0.88)] dark:bg-[rgba(18,20,28,0.88)] backdrop-blur-[32px] backdrop-saturate-[185%] border border-[rgba(255,255,255,0.85)] dark:border-[rgba(255,255,255,0.18)] shadow-[0_28px_70px_rgba(0,0,0,0.42)]"
+      ></div>
+
+      <div class="relative z-[1] p-5 sm:p-6">
+        <!-- Modal Header -->
+        <div class="flex items-center justify-between gap-3 mb-4">
+          <div class="text-left">
+            <h3 id="save-modal-title" class="text-base sm:text-lg font-extrabold tracking-tight text-slate-900 dark:text-white">
+              Save Visiting Card
+            </h3>
+            <p class="text-[11px] font-medium text-slate-600 dark:text-slate-300">
+              High-resolution card with contacts &amp; location scanner
+            </p>
+          </div>
+          <button
+            id="close-save-modal-btn"
+            type="button"
+            aria-label="Close card preview"
+            class="w-9 h-9 rounded-full bg-slate-900/10 hover:bg-slate-900/15 dark:bg-white/10 dark:hover:bg-white/20 text-slate-900 dark:text-white flex items-center justify-center transition-colors cursor-pointer"
+          >
+            <svg class="w-4 h-4" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2.4">
+              <path stroke-linecap="round" stroke-linejoin="round" d="M6 18L18 6M6 6l12 12" />
+            </svg>
+          </button>
         </div>
-        <h3 id="qr-modal-title" class="text-lg font-bold text-white tracking-tight">Scan to Open Card</h3>
-        <p class="text-xs text-neutral-400 mt-1">No NFC on their phone? Let them scan this QR code.</p>
-      </div>
 
-      <!-- QR Code Canvas Container -->
-      <div class="bg-white rounded-2xl p-4 mx-auto w-fit shadow-[0_0_35px_rgba(212,175,55,0.18)] border-2 border-gold/40">
-        <canvas id="qr-canvas" class="block rounded-lg"></canvas>
-      </div>
+        <!-- Generated 1600x960 Card Preview (select-auto so mobile press & hold works) -->
+        <div class="w-full rounded-2xl overflow-hidden shadow-[0_18px_45px_rgba(15,23,42,0.22)] border border-slate-200 dark:border-white/20 bg-white select-auto">
+          <img
+            id="card-preview-img"
+            src=""
+            alt="Radhe Creation Printable Visiting Card with Contacts and Location QR Code"
+            class="block w-full h-auto"
+          />
+        </div>
 
-      <!-- Encoded URL Preview -->
-      <div class="mt-4 px-3 py-2 rounded-xl bg-black/50 border border-white/[0.07] text-center">
-        <p id="qr-url-display" class="text-[11px] text-neutral-400 font-mono truncate"></p>
-      </div>
+        <!-- Save Actions -->
+        <div class="mt-4 grid grid-cols-1 sm:grid-cols-2 gap-2.5">
+          <button
+            id="share-save-photos-btn"
+            type="button"
+            class="flex items-center justify-center gap-2 py-3.5 px-4 rounded-2xl bg-slate-900 hover:bg-slate-800 dark:bg-white dark:hover:bg-slate-100 text-white dark:text-slate-900 text-xs font-bold shadow-[0_12px_26px_rgba(15,23,42,0.22)] dark:shadow-[0_12px_26px_rgba(255,255,255,0.14)] active:scale-[0.98] transition-all duration-300 ease-silk cursor-pointer"
+          >
+            <svg class="w-4 h-4 shrink-0" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2.2">
+              <path stroke-linecap="round" stroke-linejoin="round" d="M4 16v1a3 3 0 003 3h10a3 3 0 003-3v-1m-4-8l-4-4m0 0L8 8m4-4v12" />
+            </svg>
+            <span>Save / Share to Photos</span>
+          </button>
 
-      <!-- Modal Actions -->
-      <div class="grid grid-cols-2 gap-2.5 mt-4">
-        <button
-          id="qr-copy-btn"
-          type="button"
-          class="flex items-center justify-center gap-1.5 py-2.5 px-3 rounded-xl bg-white/[0.07] hover:bg-white/[0.12] border border-white/10 text-xs font-semibold text-white active:scale-95 transition-all"
-        >
-          <svg class="w-4 h-4 text-gold" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2">
-            <path stroke-linecap="round" stroke-linejoin="round" d="M8 16H6a2 2 0 01-2-2V6a2 2 0 012-2h8a2 2 0 012 2v2m-6 12h8a2 2 0 002-2v-8a2 2 0 00-2-2h-8a2 2 0 00-2 2v8a2 2 0 002 2z" />
-          </svg>
-          Copy Link
-        </button>
-        <button
-          id="qr-download-btn"
-          type="button"
-          class="flex items-center justify-center gap-1.5 py-2.5 px-3 rounded-xl bg-gold/20 hover:bg-gold/30 border border-gold/35 text-xs font-semibold text-gold-light active:scale-95 transition-all"
-        >
-          <svg class="w-4 h-4" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2">
-            <path stroke-linecap="round" stroke-linejoin="round" d="M4 16v1a3 3 0 003 3h10a3 3 0 003-3v-1m-4-4l-4 4m0 0l-4-4m4 4V4" />
-          </svg>
-          Save QR PNG
-        </button>
+          <button
+            id="download-png-btn"
+            type="button"
+            class="flex items-center justify-center gap-2 py-3.5 px-4 rounded-2xl bg-white/85 hover:bg-white dark:bg-white/[0.12] dark:hover:bg-white/[0.18] border border-slate-900/[0.10] dark:border-white/[0.16] text-slate-900 dark:text-white text-xs font-bold active:scale-[0.98] transition-all duration-300 ease-silk cursor-pointer"
+          >
+            <svg class="w-4 h-4 shrink-0" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2.2">
+              <path stroke-linecap="round" stroke-linejoin="round" d="M4 16v1a3 3 0 003 3h10a3 3 0 003-3v-1m-4-4l-4 4m0 0l-4-4m4 4V4" />
+            </svg>
+            <span>Download PNG</span>
+          </button>
+        </div>
+
+        <p class="mt-3 text-center text-[11px] font-medium text-slate-600 dark:text-slate-300">
+          Tip: You can also press &amp; hold the card above to Save to Photos
+        </p>
       </div>
     </div>
   </div>
 
-  <!-- Toast Notification (Never uses alert()) -->
+  <!-- Floating Toast Feedback Banner (No alert() or confirm() used) -->
   <div
     id="toast"
     role="status"
     aria-live="polite"
-    class="fixed top-5 left-1/2 -translate-x-1/2 z-50 pointer-events-none opacity-0 -translate-y-3 transition-all duration-300"
+    class="fixed top-5 left-1/2 -translate-x-1/2 z-50 pointer-events-none opacity-0 -translate-y-2 transition-all duration-500 ease-silk"
   >
-    <div class="flex items-center gap-2 px-4 py-2.5 rounded-full bg-surface/95 backdrop-blur-xl border border-gold/35 shadow-[0_10px_30px_rgba(0,0,0,0.75)] text-xs font-medium text-white whitespace-nowrap">
-      <span class="w-2 h-2 rounded-full bg-gold"></span>
-      <span id="toast-message">Copied!</span>
+    <div class="flex items-center gap-2 px-4 py-2.5 rounded-full bg-slate-900/95 dark:bg-white/95 text-white dark:text-slate-900 text-xs font-semibold shadow-[0_14px_34px_rgba(15,23,42,0.26)] whitespace-nowrap">
+      <span id="toast-dot" class="w-2 h-2 rounded-full"></span>
+      <span id="toast-message">Link copied!</span>
     </div>
   </div>
 
   <script>
     /* =========================================================================
-       EASY-TO-EDIT CARD CONFIGURATION
-       Edit ONLY the values inside CARD_CONFIG below to customize your entire
-       NFC Digital Visiting Card. No HTML or CSS knowledge required!
+       1. CENTRALIZED CONFIGURATION — RADHE CREATION
+       Edit ONLY this object to update contacts, address, or map links.
+       - Upload your square logo image beside index.html on GitHub as: logo.png
+       - Do NOT upload a separate text file for your location link — paste your
+         Google Maps link & pin coordinates directly inside `location` below!
     ========================================================================= */
     const CARD_CONFIG = {
-      // 1. Your Brand / Business Header Details
-      brand: {
-        name: "YOUR BRAND NAME",               // Main heading on your card
-        initials: "YB",                         // Shown inside the gold monogram badge
-        logoUrl: "",                            // Optional: Paste an image URL here (leave "" for monogram)
-        tagline: "Premium Solutions • Trusted Service",
-        badgeText: "NFC Verified • Tap to Connect",
-        // Optional: Paste your live hosted link here (e.g., "https://yourname.netlify.app")
-        // If left empty "", it automatically uses your current webpage URL.
-        publicCardUrl: "",
-        footerText: "Smart NFC Business Card • Tap to Connect"
-      },
-
-      // 2. Two Full Contact Cards (Call, WhatsApp, Copy Number, One-Tap Save .vcf)
+      brandName: "RADHE CREATION",
+      slogan: "Polyester Dyed Yarn • Nylon Yarn • Rapier Yarn Beam",
+      specialties: [
+        "Polyester Dyed Yarn",
+        "Nylon Yarn",
+        "Rapier Yarn Beam"
+      ],
+      pageUrl: "https://smit0125.github.io/card/",
+      logoPath: "./logo.png",
+      // Exact 6 colors sampled from Radhe Creation's peacock logo
+      logoColors: [
+        "#EC268F",
+        "#8A2BE2",
+        "#00AEEF",
+        "#16A34A",
+        "#FACC15",
+        "#F97316"
+      ],
       contacts: [
         {
-          badge: "Primary",
-          name: "Primary Contact Name",
-          role: "Founder & Director",
-          phoneDisplay: "+91 98765 43210",      // How the number looks on screen
-          phoneRaw: "+919876543210",            // Used for Call & Save Contact (no spaces)
-          whatsappNumber: "919876543210",       // Country code + number ONLY (no + or spaces)
-          whatsappMessage: "Hi! I just tapped your NFC visiting card and would love to connect.",
-          email: "primary@yourbrand.com",
-          company: "YOUR BRAND NAME"
+          id: "founder",
+          tabLabel: "Founder",
+          badge: "FOUNDER",
+          name: "Jayantibhai Savaliya",
+          role: "Founder",
+          phoneDisplay: "+91 99254 20263",
+          phoneRaw: "+919925420263",
+          whatsappNumber: "919925420263",
+          whatsappText: "Hello Jayantibhai, I connected via Radhe Creation's digital card."
         },
         {
-          badge: "Secondary",
-          name: "Secondary Contact Name",
-          role: "Co-Founder & Sales Lead",
-          phoneDisplay: "+91 91234 56789",
-          phoneRaw: "+919123456789",
-          whatsappNumber: "919123456789",
-          whatsappMessage: "Hello! I got your details from your NFC card. Let's talk!",
-          email: "sales@yourbrand.com",
-          company: "YOUR BRAND NAME"
+          id: "operations",
+          tabLabel: "Management",
+          badge: "OPERATIONS & SALES",
+          name: "Smit Savaliya",
+          role: "Operations & Sales",
+          phoneDisplay: "+91 99784 84993",
+          phoneRaw: "+919978484993",
+          whatsappNumber: "919978484993",
+          whatsappText: "Hello Smit, I connected via Radhe Creation's digital card."
         }
       ],
-
-      // 3. WhatsApp Direct Options (Linktree-style quick chat rows)
-      whatsappOptions: [
-        {
-          title: "WhatsApp — Primary Contact",
-          subtitle: "Direct inquiry & quick response",
-          number: "919876543210",
-          message: "Hi! I tapped your NFC card and want to know more about your services."
-        },
-        {
-          title: "WhatsApp — Sales & Orders",
-          subtitle: "Get pricing, catalog & support",
-          number: "919123456789",
-          message: "Hello! Please share your latest catalog and details."
-        }
-      ],
-
-      // 4. Instagram Profile Options (2 Instagram rows)
-      instagramOptions: [
-        {
-          title: "Official Business Instagram",
-          handle: "@your_main_insta",
-          url: "https://instagram.com/your_main_insta"
-        },
-        {
-          title: "Personal / Portfolio Instagram",
-          handle: "@your_second_insta",
-          url: "https://instagram.com/your_second_insta"
-        }
-      ],
-
-      // 5. Additional Details (Email & Office/Shop Location)
-      additional: {
-        email: "contact@yourbrand.com",
-        emailTitle: "Send an Email",
-        locationTitle: "Office / Store Location",
-        addressText: "Ring Road, Surat, Gujarat, India",
-        mapsUrl: "https://maps.google.com/?q=Surat,Gujarat,India"
+      location: {
+        tabLabel: "Location",
+        badge: "UNIT & OFFICE",
+        title: "Unit & Office",
+        addressLine1: "Radhe Creation Textile Unit", // Replace with your exact unit / industrial estate address
+        addressLine2: "Surat, Gujarat, India",
+        googleMapsUrl: "https://maps.app.goo.gl/wW6VutsNTmBXXdJ7A?g_st=ic", // If cleared (""), auto-uses lat,lng below for Google Maps & Location QR
+        lat: 21.0807683,
+        lng: 72.8520574
       }
     };
 
     /* =========================================================================
-       INLINE SVG ICONS LIBRARY (Zero external dependencies)
+       2. STRICT SYSTEM-ONLY THEME WATCHER (NO MANUAL BUTTONS OR OVERRIDES)
+       Live-tracks window.matchMedia('(prefers-color-scheme: dark)') for the
+       background canvas and browser status bar <meta name="theme-color">.
+    ========================================================================= */
+    const SystemTheme = (() => {
+      const mql = window.matchMedia ? window.matchMedia('(prefers-color-scheme: dark)') : null;
+      let dark = mql ? mql.matches : false;
+
+      function syncMeta() {
+        const meta = document.getElementById('theme-color-meta');
+        if (meta) meta.setAttribute('content', dark ? '#090A0F' : '#F6F7FA');
+      }
+
+      function init() {
+        dark = mql ? mql.matches : false;
+        syncMeta();
+
+        if (mql) {
+          const onSystemThemeChange = (e) => {
+            dark = Boolean(e.matches);
+            syncMeta();
+          };
+          if (mql.addEventListener) mql.addEventListener('change', onSystemThemeChange);
+          else if (mql.addListener) mql.addListener(onSystemThemeChange);
+        }
+      }
+
+      return { init, isDark: () => dark };
+    })();
+
+    /* =========================================================================
+       3. LOGO COLOR PALETTE & SAFE DOMINANT COLOR EXTRACTION
+    ========================================================================= */
+    function hexToRgb(hex) {
+      const clean = String(hex || '').replace('#', '').trim();
+      if (clean.length === 6) {
+        return [
+          parseInt(clean.slice(0, 2), 16) || 0,
+          parseInt(clean.slice(2, 4), 16) || 0,
+          parseInt(clean.slice(4, 6), 16) || 0
+        ];
+      }
+      return [233, 30, 99];
+    }
+
+    let activeLogoHex = CARD_CONFIG.logoColors.slice();
+    let activeLogoRgb = activeLogoHex.map(hexToRgb);
+
+    /**
+     * Attempts to extract up to 6 vibrant dominant colors from the loaded logo.
+     * Wrapped in try/catch for CORS safety; falls back cleanly to CARD_CONFIG.logoColors.
+     */
+    function tryExtractLogoColors(imgEl) {
+      try {
+        const sampleSize = 48;
+        const c = document.createElement('canvas');
+        c.width = sampleSize;
+        c.height = sampleSize;
+        const cx = c.getContext('2d');
+        cx.drawImage(imgEl, 0, 0, sampleSize, sampleSize);
+        const pixels = cx.getImageData(0, 0, sampleSize, sampleSize).data;
+
+        const hueBins = new Map();
+        for (let i = 0; i < pixels.length; i += 4) {
+          const r = pixels[i], g = pixels[i + 1], b = pixels[i + 2], a = pixels[i + 3];
+          if (a < 180) continue;
+          const max = Math.max(r, g, b);
+          const min = Math.min(r, g, b);
+          const sat = max === 0 ? 0 : (max - min) / max;
+          if (sat < 0.35 || max < 60 || (r > 235 && g > 235 && b > 235)) continue;
+
+          let hue = 0;
+          const d = max - min;
+          if (d > 0) {
+            if (max === r) hue = ((g - b) / d) % 6;
+            else if (max === g) hue = (b - r) / d + 2;
+            else hue = (r - g) / d + 4;
+            hue = Math.round(((hue * 60) + 360) % 360);
+          }
+          const bin = Math.floor(hue / 30);
+          const entry = hueBins.get(bin) || { count: 0, r: 0, g: 0, b: 0 };
+          entry.count++;
+          entry.r += r;
+          entry.g += g;
+          entry.b += b;
+          hueBins.set(bin, entry);
+        }
+
+        const top = Array.from(hueBins.values())
+          .filter((b) => b.count >= 4)
+          .sort((a, b) => b.count - a.count)
+          .slice(0, 6);
+
+        if (top.length >= 3) {
+          activeLogoRgb = top.map((b) => [
+            Math.round(b.r / b.count),
+            Math.round(b.g / b.count),
+            Math.round(b.b / b.count)
+          ]);
+          activeLogoHex = activeLogoRgb.map(([r, g, b]) =>
+            '#' + [r, g, b].map((v) => v.toString(16).padStart(2, '0')).join('').toUpperCase()
+          );
+        }
+      } catch (err) {
+        // Cross-origin or security fallback: retain exact CARD_CONFIG.logoColors
+        activeLogoHex = CARD_CONFIG.logoColors.slice();
+        activeLogoRgb = activeLogoHex.map(hexToRgb);
+      }
+    }
+
+    /* =========================================================================
+       4. ACTION ICONS & SHARED UTILITIES
     ========================================================================= */
     const ICONS = {
-      nfc: `<svg class="w-3.5 h-3.5 text-gold" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2">
-        <path stroke-linecap="round" stroke-linejoin="round" d="M8.5 16.5a5 5 0 010-9m3.5 11.5a8.5 8.5 0 010-14m3.5 16.5a12 12 0 010-19M5.5 14a2 2 0 010-4" />
-      </svg>`,
-      phone: `<svg class="w-4 h-4" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2">
-        <path stroke-linecap="round" stroke-linejoin="round" d="M3 5a2 2 0 012-2h3.28a1 1 0 01.948.684l1.498 4.493a1 1 0 01-.502 1.21l-2.257 1.13a11.042 11.042 0 005.516 5.516l1.13-2.257a1 1 0 011.21-.502l4.493 1.498a1 1 0 01.684.949V19a2 2 0 01-2 2h-1C9.716 21 3 14.284 3 6V5z" />
-      </svg>`,
-      whatsapp: `<svg class="w-4 h-4" viewBox="0 0 24 24" fill="currentColor">
-        <path d="M12.031 2C6.502 2 2 6.502 2 12.031c0 1.766.461 3.49 1.337 5.012L2 22l5.095-1.336a9.99 9.99 0 004.936 1.298h.004c5.529 0 10.031-4.502 10.031-10.031S17.56 2 12.031 2zm5.847 14.242c-.246.693-1.434 1.326-1.99 1.409-.513.076-1.164.108-1.882-.12-.436-.139-.997-.324-1.718-.635-3.025-1.307-5-4.365-5.151-4.566-.15-.201-1.229-1.636-1.229-3.12 0-1.484.777-2.214 1.053-2.516.276-.301.602-.377.803-.377.2 0 .401.002.577.011.185.009.433-.07.677.517.251.603.854 2.087.929 2.238.075.151.125.327.025.528-.1.201-.151.327-.301.503-.151.176-.317.393-.452.528-.151.15-.308.314-.132.616.176.301.782 1.29 1.679 2.089 1.154 1.029 2.126 1.348 2.427 1.499.301.151.477.126.652-.075.176-.201.753-.879.954-1.18.201-.301.401-.251.677-.151.276.101 1.756.828 2.057.979.301.151.502.226.577.352.075.125.075.728-.171 1.421z"/>
-      </svg>`,
-      saveUser: `<svg class="w-4 h-4" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2">
+      saveContact: `<svg class="w-4 h-4 shrink-0" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2.1">
         <path stroke-linecap="round" stroke-linejoin="round" d="M18 9v3m0 0v3m0-3h3m-3 0h-3m-2-5a4 4 0 11-8 0 4 4 0 018 0zM3 20a6 6 0 0112 0v1H3v-1z" />
       </svg>`,
-      copy: `<svg class="w-3.5 h-3.5" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2">
-        <path stroke-linecap="round" stroke-linejoin="round" d="M8 16H6a2 2 0 01-2-2V6a2 2 0 012-2h8a2 2 0 012 2v2m-6 12h8a2 2 0 002-2v-8a2 2 0 00-2-2h-8a2 2 0 00-2 2v8a2 2 0 002 2z" />
+      whatsapp: `<svg class="w-4 h-4 shrink-0" viewBox="0 0 24 24" fill="currentColor">
+        <path d="M12.031 2C6.502 2 2 6.502 2 12.031c0 1.766.461 3.49 1.337 5.012L2 22l5.095-1.336a9.99 9.99 0 004.936 1.298h.004c5.529 0 10.031-4.502 10.031-10.031S17.56 2 12.031 2zm5.847 14.242c-.246.693-1.434 1.326-1.99 1.409-.513.076-1.164.108-1.882-.12-.436-.139-.997-.324-1.718-.635-3.025-1.307-5-4.365-5.151-4.566-.15-.201-1.229-1.636-1.229-3.12 0-1.484.777-2.214 1.053-2.516.276-.301.602-.377.803-.377.2 0 .401.002.577.011.185.009.433-.07.677.517.251.603.854 2.087.929 2.238.075.151.125.327.025.528-.1.201-.151.327-.301.503-.151.176-.317.393-.452.528-.151.15-.308.314-.132.616.176.301.782 1.29 1.679 2.089 1.154 1.029 2.126 1.348 2.427 1.499.301.151.477.126.652-.075.176-.201.753-.879.954-1.18.201-.301.401-.251.677-.151.276.101 1.756.828 2.057.979.301.151.502.226.577.352.075.125.075.728-.171 1.421z"/>
       </svg>`,
-      check: `<svg class="w-3.5 h-3.5 text-whatsapp" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2.5">
-        <path stroke-linecap="round" stroke-linejoin="round" d="M5 13l4 4L19 7" />
+      phone: `<svg class="w-4 h-4 shrink-0" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2">
+        <path stroke-linecap="round" stroke-linejoin="round" d="M3 5a2 2 0 012-2h3.28a1 1 0 01.948.684l1.498 4.493a1 1 0 01-.502 1.21l-2.257 1.13a11.042 11.042 0 005.516 5.516l1.13-2.257a1 1 0 011.21-.502l4.493 1.498a1 1 0 01.684.949V19a2 2 0 01-2 2h-1C9.716 21 3 14.284 3 6V5z" />
       </svg>`,
-      instagram: `<svg class="w-5 h-5 text-white" viewBox="0 0 24 24" fill="currentColor">
-        <path d="M12 2.163c3.204 0 3.584.012 4.85.07 3.252.148 4.771 1.691 4.919 4.919.058 1.265.069 1.645.069 4.849 0 3.205-.012 3.584-.069 4.849-.149 3.225-1.664 4.771-4.919 4.919-1.266.058-1.644.07-4.85.07-3.204 0-3.584-.012-4.849-.07-3.26-.149-4.771-1.699-4.919-4.92-.058-1.265-.07-1.644-.07-4.849 0-3.204.013-3.583.07-4.849.149-3.227 1.664-4.771 4.919-4.919 1.266-.057 1.645-.069 4.849-.069zm0-2.163c-3.259 0-3.667.014-4.947.072-4.358.2-6.78 2.618-6.98 6.98-.059 1.281-.073 1.689-.073 4.948 0 3.259.014 3.668.072 4.948.2 4.358 2.618 6.78 6.98 6.98 1.281.058 1.689.072 4.948.072 3.259 0 3.668-.014 4.948-.072 4.354-.2 6.782-2.618 6.979-6.98.059-1.28.073-1.689.073-4.948 0-3.259-.014-3.667-.072-4.947-.196-4.354-2.617-6.78-6.979-6.98-1.281-.059-1.69-.073-4.949-.073zm0 5.838a6.162 6.162 0 100 12.324 6.162 6.162 0 000-12.324zM12 16a4 4 0 110-8 4 4 0 010 8zm6.406-11.845a1.44 1.44 0 100 2.881 1.44 1.44 0 000-2.881z"/>
-      </svg>`,
-      email: `<svg class="w-5 h-5" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="1.9">
-        <path stroke-linecap="round" stroke-linejoin="round" d="M3 8l7.89 5.26a2 2 0 002.22 0L21 8M5 19h14a2 2 0 002-2V7a2 2 0 00-2-2H5a2 2 0 00-2 2v10a2 2 0 002 2z" />
-      </svg>`,
-      mapPin: `<svg class="w-5 h-5" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="1.9">
+      googleMaps: `<svg class="w-4 h-4 shrink-0" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2.1">
         <path stroke-linecap="round" stroke-linejoin="round" d="M17.657 16.657L13.414 20.9a1.998 1.998 0 01-2.827 0l-4.244-4.243a8 8 0 1111.314 0z" />
         <path stroke-linecap="round" stroke-linejoin="round" d="M15 11a3 3 0 11-6 0 3 3 0 016 0z" />
       </svg>`,
-      share: `<svg class="w-5 h-5" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="1.9">
-        <path stroke-linecap="round" stroke-linejoin="round" d="M8.684 13.342C8.886 12.938 9 12.482 9 12c0-.482-.114-.938-.316-1.342m0 2.684a3 3 0 110-2.684m0 2.684l6.632 3.316m-6.632-6l6.632-3.316m0 0a3 3 0 105.367-2.684 3 3 0 00-5.367 2.684zm0 9.316a3 3 0 105.368 2.684 3 3 0 00-5.368-2.684z" />
-      </svg>`,
-      arrow: `<svg class="w-4 h-4 text-neutral-500 group-hover:text-white group-hover:translate-x-0.5 transition-all" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2.2">
-        <path stroke-linecap="round" stroke-linejoin="round" d="M9 5l7 7-7 7" />
+      appleMaps: `<svg class="w-4 h-4 shrink-0" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2.1">
+        <path stroke-linecap="round" stroke-linejoin="round" d="M9 20l-5.447-2.724A1 1 0 013 16.382V5.618a1 1 0 011.447-.894L9 7m0 13l6-3m-6 3V7m6 10l4.553 2.276A1 1 0 0021 18.382V7.618a1 1 0 00-.553-.894L15 4m0 13V4m0 0L9 7" />
       </svg>`
     };
 
-    /* =========================================================================
-       UTILITY FUNCTIONS: Toast, Clipboard, vCard (.vcf), Share, URL Helper
-    ========================================================================= */
     let toastTimer = null;
 
     function showToast(message) {
       const toast = document.getElementById('toast');
-      const msgEl = document.getElementById('toast-message');
-      if (!toast || !msgEl) return;
-
-      msgEl.textContent = message;
-      toast.classList.remove('opacity-0', '-translate-y-3');
+      const label = document.getElementById('toast-message');
+      if (!toast || !label) return;
+      label.textContent = message;
+      toast.classList.remove('opacity-0', '-translate-y-2');
       toast.classList.add('opacity-100', 'translate-y-0');
-
-      if (toastTimer) clearTimeout(toastTimer);
+      clearTimeout(toastTimer);
       toastTimer = setTimeout(() => {
         toast.classList.remove('opacity-100', 'translate-y-0');
-        toast.classList.add('opacity-0', '-translate-y-3');
-      }, 2400);
+        toast.classList.add('opacity-0', '-translate-y-2');
+      }, 2200);
     }
 
-    /**
-     * Safe HTML escaping to prevent markup glitches when editing CARD_CONFIG.
-     */
-    function escapeHtml(str) {
+    function esc(str) {
       return String(str || '')
         .replace(/&/g, '&amp;')
         .replace(/</g, '&lt;')
@@ -397,150 +734,120 @@
         .replace(/'/g, '&#39;');
     }
 
-    /**
-     * Extract clean initials (up to 2 letters) from a full name.
-     */
     function getInitials(name) {
-      const parts = String(name || '').trim().split(/\s+/).filter(Boolean);
-      if (parts.length === 0) return 'ID';
-      if (parts.length === 1) return parts[0].slice(0, 2).toUpperCase();
-      return (parts[0][0] + parts[parts.length - 1][0]).toUpperCase();
+      const parts = String(name || '').trim().split(/\s+/);
+      return ((parts[0]?.[0] || '') + (parts[1]?.[0] || '')).toUpperCase() || 'RC';
+    }
+
+    function buildWhatsAppUrl(number, prefill) {
+      const digits = String(number || '').replace(/[^\d]/g, '');
+      const query = prefill ? `?text=${encodeURIComponent(prefill)}` : '';
+      return `https://wa.me/${digits}${query}`;
     }
 
     /**
-     * Reliable clipboard copy using document.execCommand('copy') for iframe safety.
+     * Smart Map Link Builder:
+     * - Google Maps uses `googleMapsUrl` if filled in, otherwise falls back to exact lat,lng.
+     * - Apple Maps always opens exact lat,lng labeled with `companyName`.
      */
-    function copyTextToClipboard(text) {
+    function getGoogleMapsUrl(loc) {
+      if (loc.googleMapsUrl && loc.googleMapsUrl.trim() !== '') {
+        return loc.googleMapsUrl.trim();
+      }
+      return `https://www.google.com/maps/search/?api=1&query=${loc.lat},${loc.lng}`;
+    }
+
+    function getAppleMapsUrl(loc) {
+      return `https://maps.apple.com/?ll=${loc.lat},${loc.lng}&q=${encodeURIComponent(CARD_CONFIG.brandName)}`;
+    }
+
+    /**
+     * Reliable iFrame-safe clipboard copy using document.execCommand('copy').
+     */
+    function copyTextSafe(text) {
       try {
-        const textarea = document.createElement('textarea');
-        textarea.value = text;
-        textarea.setAttribute('readonly', '');
-        textarea.style.position = 'fixed';
-        textarea.style.top = '-9999px';
-        textarea.style.left = '-9999px';
-        document.body.appendChild(textarea);
-        textarea.focus();
-        textarea.select();
-        textarea.setSelectionRange(0, textarea.value.length);
-        const copied = document.execCommand('copy');
-        document.body.removeChild(textarea);
-        return copied;
+        const ta = document.createElement('textarea');
+        ta.value = text;
+        ta.setAttribute('readonly', '');
+        ta.style.position = 'fixed';
+        ta.style.top = '-9999px';
+        ta.style.left = '-9999px';
+        document.body.appendChild(ta);
+        ta.focus();
+        ta.select();
+        ta.setSelectionRange(0, ta.value.length);
+        const ok = document.execCommand('copy');
+        document.body.removeChild(ta);
+        return ok;
       } catch (err) {
         return false;
       }
     }
 
     /**
-     * Build a WhatsApp deep link with an optional pre-filled greeting message.
-     */
-    function buildWhatsAppUrl(number, message) {
-      const cleanNum = String(number || '').replace(/[^\d]/g, '');
-      const textParam = message ? `?text=${encodeURIComponent(message)}` : '';
-      return `https://wa.me/${cleanNum}${textParam}`;
-    }
-
-    /**
-     * Determine the active public URL for sharing and QR code generation.
-     */
-    function getShareableUrl() {
-      if (CARD_CONFIG.brand.publicCardUrl && CARD_CONFIG.brand.publicCardUrl.trim()) {
-        return CARD_CONFIG.brand.publicCardUrl.trim();
-      }
-      const href = window.location.href;
-      if (href && /^https?:\/\//i.test(href)) {
-        return href;
-      }
-      return 'https://yourbrand.netlify.app';
-    }
-
-    /**
-     * Generate and trigger download of a valid vCard 3.0 (.vcf) file.
-     * Compatible with both Android and iOS native Contacts apps.
+     * Generates and downloads a standards-compliant vCard 3.0 (.vcf) file.
      */
     function downloadVCard(contact) {
       try {
-        const cleanVal = (val) => String(val || '').replace(/[\r\n]+/g, ' ').trim();
-        const fullName = cleanVal(contact.name);
-        const nameParts = fullName.split(/\s+/);
-        const firstName = nameParts[0] || fullName;
-        const lastName = nameParts.length > 1 ? nameParts.slice(1).join(' ') : '';
+        const clean = (v) => String(v || '').replace(/[\r\n]+/g, ' ').trim();
+        const fullName = clean(contact.name);
+        const parts = fullName.split(/\s+/);
+        const first = parts[0] || fullName;
+        const last = parts.length > 1 ? parts.slice(1).join(' ') : '';
 
         const lines = [
           'BEGIN:VCARD',
           'VERSION:3.0',
-          `N:${lastName};${firstName};;;`,
+          `N:${last};${first};;;`,
           `FN:${fullName}`,
-          contact.company ? `ORG:${cleanVal(contact.company)}` : '',
-          contact.role ? `TITLE:${cleanVal(contact.role)}` : '',
-          `TEL;TYPE=CELL,VOICE:${cleanVal(contact.phoneRaw)}`,
-          contact.email ? `EMAIL;TYPE=WORK,INTERNET:${cleanVal(contact.email)}` : '',
-          `URL:${cleanVal(getShareableUrl())}`,
+          `ORG:${clean(CARD_CONFIG.brandName)}`,
+          `TITLE:${clean(contact.role)}`,
+          `TEL;TYPE=CELL,VOICE:${clean(contact.phoneRaw)}`,
+          `URL:${clean(CARD_CONFIG.pageUrl)}`,
+          `NOTE:${clean(CARD_CONFIG.slogan)}`,
           'END:VCARD'
-        ].filter(Boolean);
+        ];
 
-        const vcfContent = lines.join('\r\n') + '\r\n';
-        const blob = new Blob([vcfContent], { type: 'text/vcard;charset=utf-8' });
+        const blob = new Blob([lines.join('\r\n') + '\r\n'], { type: 'text/vcard;charset=utf-8' });
         const url = URL.createObjectURL(blob);
-
-        const link = document.createElement('a');
-        link.href = url;
-        const safeFile = fullName.replace(/[^a-z0-9]+/gi, '_').replace(/^_|_$/g, '') || 'Contact';
-        link.download = `${safeFile}.vcf`;
-        document.body.appendChild(link);
-        link.click();
-        document.body.removeChild(link);
-
+        const a = document.createElement('a');
+        a.href = url;
+        a.download = `${fullName.replace(/[^a-z0-9]+/gi, '_') || 'Radhe_Creation'}.vcf`;
+        document.body.appendChild(a);
+        a.click();
+        document.body.removeChild(a);
         setTimeout(() => URL.revokeObjectURL(url), 1500);
-        showToast(`Saving ${fullName}'s contact (.vcf)`);
+
+        showToast(`Saving ${fullName} (.vcf)`);
       } catch (err) {
-        showToast('Could not create contact file');
+        showToast('Unable to save contact file');
       }
-    }
-
-    /**
-     * Native Web Share API with automatic clipboard fallback.
-     */
-    async function shareCard() {
-      const shareUrl = getShareableUrl();
-      const shareData = {
-        title: `${CARD_CONFIG.brand.name} — Digital Visiting Card`,
-        text: `Connect with ${CARD_CONFIG.brand.name} via our digital visiting card:`,
-        url: shareUrl
-      };
-
-      try {
-        if (navigator.share && /^https?:\/\//i.test(shareUrl)) {
-          await navigator.share(shareData);
-          return;
-        }
-      } catch (err) {
-        if (err && err.name === 'AbortError') return;
-      }
-
-      const ok = copyTextToClipboard(shareUrl);
-      showToast(ok ? 'Card link copied to clipboard!' : 'Open QR modal to copy link');
     }
 
     /* =========================================================================
-       PURE JAVASCRIPT QR CODE GENERATOR (ISO/IEC 18004, Versions 1–9, ECC L)
-       100% offline, zero external APIs, generates real scannable QR codes!
+       5. EMBEDDED ZERO-DEPENDENCY PURE-JS QR CODE GENERATOR (ISO/IEC 18004)
+       Supports Byte-Mode ECC-M for Versions 1–7 (up to 122 UTF-8 bytes) with
+       full GF(256) Reed-Solomon error correction, optimal mask selection, and
+       crisp HiDPI canvas rendering for both Page QR and Location Card QR.
     ========================================================================= */
-    const QRGenerator = (() => {
-      // GF(256) exponent & log lookup tables (polynomial 0x11d)
-      const EXP = new Uint8Array(512);
-      const LOG = new Uint8Array(256);
-      let x = 1;
-      for (let i = 0; i < 255; i++) {
-        EXP[i] = x;
-        LOG[x] = i;
-        x <<= 1;
-        if (x & 0x100) x ^= 0x11d;
-      }
-      for (let i = 255; i < 512; i++) EXP[i] = EXP[i - 255];
+    const PureQR = (() => {
+      // GF(256) exp/log tables with primitive polynomial 0x11D
+      const GF_EXP = new Uint8Array(512);
+      const GF_LOG = new Uint8Array(256);
+      (function initGF() {
+        let x = 1;
+        for (let i = 0; i < 255; i++) {
+          GF_EXP[i] = x;
+          GF_LOG[x] = i;
+          x <<= 1;
+          if (x & 0x100) x ^= 0x11D;
+        }
+        for (let i = 255; i < 512; i++) GF_EXP[i] = GF_EXP[i - 255];
+      })();
 
       function gfMul(a, b) {
         if (a === 0 || b === 0) return 0;
-        return EXP[LOG[a] + LOG[b]];
+        return GF_EXP[GF_LOG[a] + GF_LOG[b]];
       }
 
       function rsGeneratorPoly(degree) {
@@ -549,734 +856,2311 @@
           const next = new Array(poly.length + 1).fill(0);
           for (let j = 0; j < poly.length; j++) {
             next[j] ^= poly[j];
-            next[j + 1] ^= gfMul(poly[j], EXP[i]);
+            next[j + 1] ^= gfMul(poly[j], GF_EXP[i]);
           }
           poly = next;
         }
         return poly;
       }
 
-      function rsRemainder(data, ecCount) {
+      function rsEncode(data, ecCount) {
         const gen = rsGeneratorPoly(ecCount);
-        const msg = new Uint8Array(data.length + ecCount);
-        msg.set(data);
+        const res = new Uint8Array(ecCount);
         for (let i = 0; i < data.length; i++) {
-          const coef = msg[i];
-          if (coef !== 0) {
-            for (let j = 0; j < gen.length; j++) {
-              msg[i + j] ^= gfMul(gen[j], coef);
+          const factor = data[i] ^ res[0];
+          for (let j = 0; j < ecCount - 1; j++) res[j] = res[j + 1];
+          res[ecCount - 1] = 0;
+          if (factor !== 0) {
+            for (let j = 0; j < ecCount; j++) {
+              res[j] ^= gfMul(gen[j + 1], factor);
             }
           }
         }
-        return msg.slice(data.length);
+        return res;
       }
-
-      // Version specs for ECC Level L (versions 1..9, byte mode 8-bit length)
-      const SPECS = [
+      // ISO/IEC 18004 ECC-M table for Versions 1 to 7
+      const VERSION_SPECS = [
         null,
-        { cap: 17,  dataCW: 19,  ecPerBlock: 7,  blocks: 1, align: [] },
-        { cap: 32,  dataCW: 34,  ecPerBlock: 10, blocks: 1, align: [6, 18] },
-        { cap: 53,  dataCW: 55,  ecPerBlock: 15, blocks: 1, align: [6, 22] },
-        { cap: 78,  dataCW: 80,  ecPerBlock: 20, blocks: 1, align: [6, 26] },
-        { cap: 106, dataCW: 108, ecPerBlock: 26, blocks: 1, align: [6, 30] },
-        { cap: 134, dataCW: 136, ecPerBlock: 18, blocks: 2, align: [6, 34] },
-        { cap: 154, dataCW: 156, ecPerBlock: 20, blocks: 2, align: [6, 22, 38] },
-        { cap: 192, dataCW: 194, ecPerBlock: 24, blocks: 2, align: [6, 24, 42] },
-        { cap: 230, dataCW: 232, ecPerBlock: 30, blocks: 2, align: [6, 26, 46] }
+        { size: 21, totalData: 16, blocks: 1, blockData: 16, blockEc: 10, align: [] },
+        { size: 25, totalData: 28, blocks: 1, blockData: 28, blockEc: 16, align: [6, 18] },
+        { size: 29, totalData: 44, blocks: 1, blockData: 44, blockEc: 26, align: [6, 22] },
+        { size: 33, totalData: 64, blocks: 2, blockData: 32, blockEc: 18, align: [6, 26] },
+        { size: 37, totalData: 86, blocks: 2, blockData: 43, blockEc: 24, align: [6, 30] },
+        { size: 41, totalData: 108, blocks: 4, blockData: 27, blockEc: 16, align: [6, 34] },
+        { size: 45, totalData: 124, blocks: 4, blockData: 31, blockEc: 18, align: [6, 22, 38] }
       ];
 
-      const MASKS = [
-        (r, c) => (r + c) % 2 === 0,
-        (r, c) => r % 2 === 0,
-        (r, c) => c % 3 === 0,
-        (r, c) => (r + c) % 3 === 0,
-        (r, c) => (Math.floor(r / 2) + Math.floor(c / 3)) % 2 === 0,
-        (r, c) => ((r * c) % 2) + ((r * c) % 3) === 0,
-        (r, c) => (((r * c) % 2) + ((r * c) % 3)) % 2 === 0,
-        (r, c) => (((r + c) % 2) + ((r * c) % 3)) % 2 === 0
-      ];
-
-      function utf8Bytes(str) {
-        const out = [];
-        for (let i = 0; i < str.length; i++) {
-          let c = str.charCodeAt(i);
-          if (c < 0x80) out.push(c);
-          else if (c < 0x800) out.push(0xc0 | (c >> 6), 0x80 | (c & 0x3f));
-          else out.push(0xe0 | (c >> 12), 0x80 | ((c >> 6) & 0x3f), 0x80 | (c & 0x3f));
+      function toUtf8Bytes(text) {
+        if (typeof TextEncoder !== 'undefined') {
+          return Array.from(new TextEncoder().encode(text));
         }
-        return out;
+        const bytes = [];
+        for (let i = 0; i < text.length; i++) bytes.push(text.charCodeAt(i) & 0xFF);
+        return bytes;
       }
 
-      function computeFormatBits(mask) {
-        // ECC Level L = 01
-        const data = (1 << 3) | mask;
-        let rem = data;
-        for (let i = 0; i < 10; i++) rem = (rem << 1) ^ ((rem >>> 9) * 0x537);
-        return ((data << 10) | rem) ^ 0x5412;
+      function computeFormatBits(maskPattern) {
+        // ECC-M indicator is 0b00 (0)
+        const data5 = (0 << 3) | (maskPattern & 7);
+        let rem = data5 << 10;
+        for (let i = 14; i >= 10; i--) {
+          if ((rem >> i) & 1) rem ^= (0x537 << (i - 10));
+        }
+        return ((data5 << 10) | rem) ^ 0x5412;
       }
 
-      function computeVersionBits(version) {
-        let rem = version;
-        for (let i = 0; i < 12; i++) rem = (rem << 1) ^ ((rem >>> 11) * 0x1f25);
-        return (version << 12) | rem;
-      }
-
-      function evaluatePenalty(mat, size) {
-        let score = 0;
-        // Rule 1: Runs of 5+ same-colored modules in rows & cols
-        for (let r = 0; r < size; r++) {
-          let run = 1;
-          for (let c = 1; c < size; c++) {
-            if (mat[r][c] === mat[r][c - 1]) {
-              run++;
-              if (run === 5) score += 3;
-              else if (run > 5) score += 1;
-            } else run = 1;
-          }
-        }
-        for (let c = 0; c < size; c++) {
-          let run = 1;
-          for (let r = 1; r < size; r++) {
-            if (mat[r][c] === mat[r - 1][c]) {
-              run++;
-              if (run === 5) score += 3;
-              else if (run > 5) score += 1;
-            } else run = 1;
-          }
-        }
-        // Rule 2: 2x2 blocks of same color
-        for (let r = 0; r < size - 1; r++) {
-          for (let c = 0; c < size - 1; c++) {
-            const v = mat[r][c];
-            if (v === mat[r][c + 1] && v === mat[r + 1][c] && v === mat[r + 1][c + 1]) {
-              score += 3;
-            }
-          }
-        }
-        return score;
-      }
-
-      function generateMatrix(text) {
-        let bytes = utf8Bytes(text);
-        if (bytes.length > 230) bytes = bytes.slice(0, 230);
-
+      function buildMatrix(text) {
+        const bytes = toUtf8Bytes(text);
         let version = 1;
-        while (version < 9 && bytes.length > SPECS[version].cap) version++;
-        const spec = SPECS[version];
-        const size = version * 4 + 17;
+        while (version <= 7 && bytes.length + 2 > VERSION_SPECS[version].totalData) {
+          version++;
+        }
+        if (version > 7) version = 7;
+        const spec = VERSION_SPECS[version];
+        const size = spec.size;
 
-        // Build bitstream: Byte mode (0100) + 8-bit length + bytes + terminator
+        // 1. Encode Byte-Mode bitstream
         const bits = [];
         const pushBits = (val, len) => {
-          for (let i = len - 1; i >= 0; i--) bits.push((val >>> i) & 1);
+          for (let i = len - 1; i >= 0; i--) bits.push((val >> i) & 1);
         };
-        pushBits(0b0100, 4);
+        pushBits(0b0100, 4); // Byte mode
         pushBits(bytes.length, 8);
-        for (const b of bytes) pushBits(b, 8);
+        for (let i = 0; i < bytes.length; i++) pushBits(bytes[i], 8);
 
-        const maxBits = spec.dataCW * 8;
-        const termLen = Math.min(4, maxBits - bits.length);
+        const maxDataBits = spec.totalData * 8;
+        const termLen = Math.min(4, maxDataBits - bits.length);
         pushBits(0, termLen);
         while (bits.length % 8 !== 0) bits.push(0);
 
-        const dataCW = [];
+        const dataCodewords = [];
         for (let i = 0; i < bits.length; i += 8) {
-          let byte = 0;
-          for (let j = 0; j < 8; j++) byte = (byte << 1) | bits[i + j];
-          dataCW.push(byte);
+          let b = 0;
+          for (let j = 0; j < 8; j++) b = (b << 1) | bits[i + j];
+          dataCodewords.push(b);
         }
-        let padToggle = 0;
-        while (dataCW.length < spec.dataCW) {
-          dataCW.push(padToggle === 0 ? 0xec : 0x11);
-          padToggle ^= 1;
+        const padBytes = [0xEC, 0x11];
+        let padIdx = 0;
+        while (dataCodewords.length < spec.totalData) {
+          dataCodewords.push(padBytes[padIdx % 2]);
+          padIdx++;
         }
 
-        // Split into blocks and compute Reed-Solomon EC codewords
-        const blockLen = spec.dataCW / spec.blocks;
-        const dataBlocks = [];
-        const ecBlocks = [];
+        // 2. Split into RS blocks & interleave codewords
+        const dBlocks = [];
+        const eBlocks = [];
         for (let b = 0; b < spec.blocks; b++) {
-          const slice = dataCW.slice(b * blockLen, (b + 1) * blockLen);
-          dataBlocks.push(slice);
-          ecBlocks.push(rsRemainder(slice, spec.ecPerBlock));
+          const slice = dataCodewords.slice(b * spec.blockData, (b + 1) * spec.blockData);
+          dBlocks.push(slice);
+          eBlocks.push(rsEncode(slice, spec.blockEc));
         }
 
-        // Interleave codewords
-        const finalCW = [];
-        for (let i = 0; i < blockLen; i++) {
-          for (let b = 0; b < spec.blocks; b++) finalCW.push(dataBlocks[b][i]);
-        }
-        for (let i = 0; i < spec.ecPerBlock; i++) {
-          for (let b = 0; b < spec.blocks; b++) finalCW.push(ecBlocks[b][i]);
-        }
-
-        // Initialize matrix and function-module tracker
-        const base = Array.from({ length: size }, () => new Uint8Array(size));
-        const isFn = Array.from({ length: size }, () => new Uint8Array(size));
-
-        const setFn = (r, c, val) => {
-          if (r >= 0 && r < size && c >= 0 && c < size) {
-            base[r][c] = val ? 1 : 0;
-            isFn[r][c] = 1;
+        const finalBits = [];
+        for (let i = 0; i < spec.blockData; i++) {
+          for (let b = 0; b < spec.blocks; b++) {
+            const val = dBlocks[b][i];
+            for (let k = 7; k >= 0; k--) finalBits.push((val >> k) & 1);
           }
-        };
+        }
+        for (let i = 0; i < spec.blockEc; i++) {
+          for (let b = 0; b < spec.blocks; b++) {
+            const val = eBlocks[b][i];
+            for (let k = 7; k >= 0; k--) finalBits.push((val >> k) & 1);
+          }
+        }
 
-        // 1. Finder patterns + separators
-        const drawFinder = (top, left) => {
-          for (let r = -1; r <= 7; r++) {
-            for (let c = -1; c <= 7; c++) {
-              const rr = top + r, cc = left + c;
-              if (rr < 0 || rr >= size || cc < 0 || cc >= size) continue;
-              const inOuter = r >= 0 && r <= 6 && c >= 0 && c <= 6;
-              const dark = inOuter && (
-                r === 0 || r === 6 || c === 0 || c === 6 ||
-                (r >= 2 && r <= 4 && c >= 2 && c <= 4)
-              );
-              setFn(rr, cc, dark);
+        // 3. Allocate matrix & function-module mask
+        const modules = Array.from({ length: size }, () => new Uint8Array(size));
+        const isFunc = Array.from({ length: size }, () => new Uint8Array(size));
+
+        function setFunc(r, c, dark) {
+          if (r < 0 || r >= size || c < 0 || c >= size) return;
+          modules[r][c] = dark ? 1 : 0;
+          isFunc[r][c] = 1;
+        }
+
+        function drawFinder(top, left) {
+          for (let dy = -1; dy <= 7; dy++) {
+            for (let dx = -1; dx <= 7; dx++) {
+              const r = top + dy, c = left + dx;
+              if (r < 0 || r >= size || c < 0 || c >= size) continue;
+              const inBox = dy >= 0 && dy <= 6 && dx >= 0 && dx <= 6;
+              const border = dy === 0 || dy === 6 || dx === 0 || dx === 6;
+              const center = dy >= 2 && dy <= 4 && dx >= 2 && dx <= 4;
+              setFunc(r, c, inBox && (border || center));
             }
           }
-        };
+        }
+
         drawFinder(0, 0);
         drawFinder(0, size - 7);
         drawFinder(size - 7, 0);
 
-        // 2. Timing patterns
-        for (let i = 8; i < size - 8; i++) {
-          setFn(6, i, i % 2 === 0);
-          setFn(i, 6, i % 2 === 0);
-        }
-
-        // 3. Alignment patterns
-        for (const r of spec.align) {
-          for (const c of spec.align) {
-            if (isFn[r][c]) continue; // Skip finder overlaps
-            for (let dr = -2; dr <= 2; dr++) {
-              for (let dc = -2; dc <= 2; dc++) {
-                const dist = Math.max(Math.abs(dr), Math.abs(dc));
-                setFn(r + dr, c + dc, dist !== 1);
+        // Alignment patterns
+        for (let i = 0; i < spec.align.length; i++) {
+          for (let j = 0; j < spec.align.length; j++) {
+            const ar = spec.align[i], ac = spec.align[j];
+            if (isFunc[ar][ac]) continue;
+            for (let dy = -2; dy <= 2; dy++) {
+              for (let dx = -2; dx <= 2; dx++) {
+                const dist = Math.max(Math.abs(dy), Math.abs(dx));
+                setFunc(ar + dy, ac + dx, dist !== 1);
               }
             }
           }
         }
 
-        // 4. Reserve format info areas & dark module
+        // Timing patterns
+        for (let i = 8; i < size - 8; i++) {
+          if (!isFunc[6][i]) setFunc(6, i, i % 2 === 0);
+          if (!isFunc[i][6]) setFunc(i, 6, i % 2 === 0);
+        }
+
+        // Dark module
+        setFunc(4 * version + 9, 8, true);
+
+        // Reserve format info slots
         for (let i = 0; i <= 8; i++) {
           if (i !== 6) {
-            setFn(8, i, 0);
-            setFn(i, 8, 0);
+            isFunc[8][i] = 1;
+            isFunc[i][8] = 1;
           }
         }
-        for (let i = 0; i < 8; i++) setFn(8, size - 1 - i, 0);
-        for (let i = 0; i < 7; i++) setFn(size - 1 - i, 8, 0);
-        setFn(size - 8, 8, 1); // Fixed dark module
+        for (let i = size - 8; i < size; i++) isFunc[8][i] = 1;
+        for (let i = size - 7; i < size; i++) isFunc[i][8] = 1;
 
-        // 5. Version info for versions >= 7
-        if (version >= 7) {
-          const vBits = computeVersionBits(version);
+        // Version 7 requires 18-bit BCH version information blocks (0x07C94)
+        if (version === 7) {
+          const verBits = 0x07C94;
           for (let i = 0; i < 18; i++) {
-            const bit = (vBits >>> i) & 1;
-            const a = Math.floor(i / 3);
-            const b = size - 11 + (i % 3);
-            setFn(a, b, bit);
-            setFn(b, a, bit);
+            const bitVal = ((verBits >> i) & 1) === 1;
+            const r = Math.floor(i / 3);
+            const c = size - 11 + (i % 3);
+            setFunc(c, r, bitVal);
+            setFunc(r, c, bitVal);
           }
         }
 
-        // 6. Place data bits in upward/downward zigzag
+        // 4. Zig-zag data bit placement
         let bitIdx = 0;
-        const totalDataBits = finalCW.length * 8;
         let upward = true;
-        for (let right = size - 1; right >= 1; right -= 2) {
-          if (right === 6) right = 5;
+        for (let col = size - 1; col >= 1; col -= 2) {
+          if (col === 6) col--;
           for (let step = 0; step < size; step++) {
             const r = upward ? (size - 1 - step) : step;
-            for (let j = 0; j < 2; j++) {
-              const c = right - j;
-              if (!isFn[r][c]) {
-                let dark = 0;
-                if (bitIdx < totalDataBits) {
-                  dark = (finalCW[bitIdx >>> 3] >>> (7 - (bitIdx & 7))) & 1;
-                  bitIdx++;
-                }
-                base[r][c] = dark;
+            for (let dx = 0; dx < 2; dx++) {
+              const c = col - dx;
+              if (!isFunc[r][c]) {
+                modules[r][c] = bitIdx < finalBits.length ? finalBits[bitIdx++] : 0;
               }
             }
           }
           upward = !upward;
         }
 
-        // Helper to apply mask + format info
-        const buildMasked = (maskIdx) => {
-          const mat = base.map((row) => new Uint8Array(row));
-          const maskFn = MASKS[maskIdx];
+        // 5. Evaluate all 8 masks and pick the lowest penalty
+        const maskFns = [
+          (r, c) => (r + c) % 2 === 0,
+          (r, c) => r % 2 === 0,
+          (r, c) => c % 3 === 0,
+          (r, c) => (r + c) % 3 === 0,
+          (r, c) => (Math.floor(r / 2) + Math.floor(c / 3)) % 2 === 0,
+          (r, c) => ((r * c) % 2) + ((r * c) % 3) === 0,
+          (r, c) => (((r * c) % 2) + ((r * c) % 3)) % 2 === 0,
+          (r, c) => (((r + c) % 2) + ((r * c) % 3)) % 2 === 0
+        ];
+
+        function applyFormat(grid, maskIdx) {
+          const fmt = computeFormatBits(maskIdx);
+          const bit = (i) => (fmt >> i) & 1;
+
+          // Copy 1 (top-left)
+          const tlCols = [0, 1, 2, 3, 4, 5, 7, 8];
+          for (let k = 0; k < 8; k++) grid[8][tlCols[k]] = bit(14 - k);
+          grid[7][8] = bit(6);
+          const tlRows = [5, 4, 3, 2, 1, 0];
+          for (let k = 0; k < 6; k++) grid[tlRows[k]][8] = bit(5 - k);
+
+          // Copy 2 (bottom-left & top-right)
+          for (let k = 0; k < 7; k++) grid[size - 1 - k][8] = bit(14 - k);
+          for (let k = 0; k < 8; k++) grid[8][size - 8 + k] = bit(7 - k);
+        }
+
+        function penaltyScore(grid) {
+          let score = 0;
+          // Adjacent same-color runs (rows & cols)
           for (let r = 0; r < size; r++) {
-            for (let c = 0; c < size; c++) {
-              if (!isFn[r][c] && maskFn(r, c)) mat[r][c] ^= 1;
+            let run = 1;
+            for (let c = 1; c < size; c++) {
+              if (grid[r][c] === grid[r][c - 1]) {
+                run++;
+                if (run === 5) score += 3;
+                else if (run > 5) score += 1;
+              } else run = 1;
             }
           }
-          const fBits = computeFormatBits(maskIdx);
-          const getBit = (idx) => (fBits >>> idx) & 1;
-
-          // Copy 1 around top-left finder
-          const coords1 = [
-            [8, 0], [8, 1], [8, 2], [8, 3], [8, 4], [8, 5], [8, 7], [8, 8],
-            [7, 8], [5, 8], [4, 8], [3, 8], [2, 8], [1, 8], [0, 8]
-          ];
-          for (let i = 0; i < 15; i++) {
-            const [r, c] = coords1[i];
-            mat[r][c] = getBit(14 - i);
+          for (let c = 0; c < size; c++) {
+            let run = 1;
+            for (let r = 1; r < size; r++) {
+              if (grid[r][c] === grid[r - 1][c]) {
+                run++;
+                if (run === 5) score += 3;
+                else if (run > 5) score += 1;
+              } else run = 1;
+            }
           }
-          // Copy 2 bottom-left & top-right
-          for (let i = 0; i < 7; i++) mat[size - 1 - i][8] = getBit(14 - i);
-          for (let i = 0; i < 8; i++) mat[8][size - 8 + i] = getBit(7 - i);
+          // 2x2 blocks
+          for (let r = 0; r < size - 1; r++) {
+            for (let c = 0; c < size - 1; c++) {
+              const v = grid[r][c];
+              if (v === grid[r][c + 1] && v === grid[r + 1][c] && v === grid[r + 1][c + 1]) {
+                score += 3;
+              }
+            }
+          }
+          // Dark/light balance
+          let darkCount = 0;
+          for (let r = 0; r < size; r++) {
+            for (let c = 0; c < size; c++) if (grid[r][c]) darkCount++;
+          }
+          const pct = (darkCount * 100) / (size * size);
+          score += Math.floor(Math.abs(pct - 50) / 5) * 10;
+          return score;
+        }
 
-          return mat;
-        };
-
-        // Choose optimal mask
-        let bestMat = null;
+        let bestGrid = null;
         let bestScore = Infinity;
+
         for (let m = 0; m < 8; m++) {
-          const candidate = buildMasked(m);
-          const penalty = evaluatePenalty(candidate, size);
-          if (penalty < bestScore) {
-            bestScore = penalty;
-            bestMat = candidate;
+          const grid = Array.from({ length: size }, (_, r) => {
+            const row = new Uint8Array(size);
+            for (let c = 0; c < size; c++) {
+              row[c] = isFunc[r][c] ? modules[r][c] : (modules[r][c] ^ (maskFns[m](r, c) ? 1 : 0));
+            }
+            return row;
+          });
+          applyFormat(grid, m);
+          const score = penaltyScore(grid);
+          if (score < bestScore) {
+            bestScore = score;
+            bestGrid = grid;
           }
         }
-        return bestMat;
+
+        return { size, grid: bestGrid };
       }
 
-      function renderToCanvas(canvas, text, targetPx = 216) {
-        const matrix = generateMatrix(text);
-        const modules = matrix.length;
-        const quiet = 3;
-        const totalModules = modules + quiet * 2;
-        const dpr = Math.min(window.devicePixelRatio || 1, 2);
-        const scale = Math.max(4, Math.floor((targetPx * dpr) / totalModules));
-        const pxSize = totalModules * scale;
+      /**
+       * Draws a sharp, scannable QR matrix directly onto any 2D canvas context
+       * at (x, y) with pixel width/height `drawSize` (includes quiet zone).
+       */
+      function drawToContext(ctx, text, x, y, drawSize, darkHex, lightHex, quietModules) {
+        const { size, grid } = buildMatrix(text);
+        const quiet = typeof quietModules === 'number' ? quietModules : 2;
+        const total = size + quiet * 2;
+        const cell = drawSize / total;
 
-        canvas.width = pxSize;
-        canvas.height = pxSize;
-        canvas.style.width = `${targetPx}px`;
-        canvas.style.height = `${targetPx}px`;
+        ctx.save();
+        ctx.fillStyle = lightHex || '#FFFFFF';
+        ctx.fillRect(x, y, drawSize, drawSize);
+        ctx.fillStyle = darkHex || '#0F172A';
 
-        const ctx = canvas.getContext('2d');
-        ctx.fillStyle = '#FFFFFF';
-        ctx.fillRect(0, 0, pxSize, pxSize);
-
-        ctx.fillStyle = '#0A0A0A';
-        for (let r = 0; r < modules; r++) {
-          for (let c = 0; c < modules; c++) {
-            if (matrix[r][c]) {
-              ctx.fillRect((c + quiet) * scale, (r + quiet) * scale, scale, scale);
+        for (let r = 0; r < size; r++) {
+          for (let c = 0; c < size; c++) {
+            if (grid[r][c]) {
+              const rx = Math.floor(x + (c + quiet) * cell);
+              const ry = Math.floor(y + (r + quiet) * cell);
+              const rw = Math.ceil(x + (c + quiet + 1) * cell) - rx;
+              const rh = Math.ceil(y + (r + quiet + 1) * cell) - ry;
+              ctx.fillRect(rx, ry, rw, rh);
             }
           }
         }
+        ctx.restore();
       }
 
-      return { renderToCanvas };
+      function renderToCanvas(canvasEl, text, darkHex, lightHex) {
+        if (!canvasEl) return;
+        const cssSize = canvasEl.clientWidth || 172;
+        const dpr = Math.min(window.devicePixelRatio || 1, 3);
+        const pxSize = Math.round(cssSize * dpr);
+
+        canvasEl.width = pxSize;
+        canvasEl.height = pxSize;
+        const ctx = canvasEl.getContext('2d');
+        drawToContext(ctx, text, 0, 0, pxSize, darkHex || '#0F172A', lightHex || '#FFFFFF', 2);
+      }
+
+      return { renderToCanvas, drawToContext };
     })();
 
     /* =========================================================================
-       DYNAMIC UI RENDERING FROM CARD_CONFIG
+       6. LIVE TOUCH-REACTIVE LOGO-COLOR FLUID + 32 RANDOM 360° YARN THREADS
+       - Strictly uses ONLY the 6 Radhe Creation logo colors.
+       - Passive window pointerdown/pointermove listeners (never blocks UI).
+       - 32 bezier threads at random 360° angles, low atmospheric opacity (0.06–0.18),
+         with smooth overdamped drift & fluid deflection (zero elastic snap/bounce).
     ========================================================================= */
-    function renderBrandHeader() {
-      const container = document.getElementById('brand-header');
-      const { name, initials, logoUrl, tagline, badgeText } = CARD_CONFIG.brand;
-      document.title = `${name} — Digital Visiting Card`;
+    const LogoFluidYarnCanvas = (() => {
+      const canvas = document.getElementById('fluid-yarn-canvas');
+      if (!canvas) return { init() {}, triggerTapBloom() {}, setSectionProgress() {} };
+      const ctx = canvas.getContext('2d');
 
-      const fallbackMonogram = `
-        <div class="w-full h-full flex items-center justify-center bg-gradient-to-br from-[#1C1A14] via-surface to-[#0E0E0E] text-gold-light font-extrabold text-2xl tracking-tighter select-none">
-          ${escapeHtml(initials || getInitials(name))}
-        </div>
-      `;
+      let width = 0;
+      let height = 0;
+      let dpr = 1;
+      let lastFrameTime = performance.now();
+      let elapsedTotal = 0;
+      let nextAmbientPlumeAt = 1100;
 
-      const avatarInner = logoUrl && logoUrl.trim()
-        ? `<img src="${escapeHtml(logoUrl)}" alt="${escapeHtml(name)} Logo" class="w-full h-full object-cover" onerror="this.parentElement.innerHTML=\`${fallbackMonogram.replace(/`/g, '\\`')}\`" />`
-        : fallbackMonogram;
+      // Smooth flow-curve state for thread opacity:
+      // 1.0 on Page 1 (Hero) -> smoothly curves down to 0.0 on Page 2+ (Contacts & QR)
+      let targetHeroFactor = 1;
+      let flowHeroFactor = 1;
 
-      container.innerHTML = `
-        <!-- NFC Verified Pill -->
-        <div class="inline-flex items-center gap-2 px-3.5 py-1.5 rounded-full bg-surface/90 border border-gold/25 backdrop-blur-md shadow-[0_0_24px_rgba(212,175,55,0.12)] mb-5">
-          <span class="relative flex h-2 w-2">
-            <span class="animate-ping absolute inline-flex h-full w-full rounded-full bg-gold opacity-75"></span>
-            <span class="relative inline-flex rounded-full h-2 w-2 bg-gold"></span>
+      function setSectionProgress(sectionPos) {
+        const u = Math.max(0, Math.min(1, Number(sectionPos) || 0));
+        // Smooth cosine S-curve so opacity eases gently in flow, never abruptly
+        targetHeroFactor = 0.5 * (1 + Math.cos(Math.PI * u));
+      }
+
+      const MAX_PLUMES = 90;
+      const plumes = [];
+      let colorCursor = 0;
+
+      let lastPointerX = 0;
+      let lastPointerY = 0;
+      let hasLastPointer = false;
+      let lastInputStamp = 0;
+      let lastInputSource = '';
+
+      // 32 random multi-directional (full 360°) low-opacity yarn threads
+      const THREAD_COUNT = 32;
+      let threads = [];
+
+      // 4 subtle slow-drifting ambient logo-color clouds behind the frosted glass
+      const ambientClouds = [
+        { cx: 0.16, cy: 0.22, rx: 0.44, sx: 0.00008, sy: 0.00006, phase: 0.4, colorIdx: 0 },
+        { cx: 0.84, cy: 0.28, rx: 0.42, sx: 0.00006, sy: 0.00008, phase: 2.0, colorIdx: 2 },
+        { cx: 0.24, cy: 0.80, rx: 0.44, sx: 0.00007, sy: 0.00005, phase: 3.5, colorIdx: 3 },
+        { cx: 0.78, cy: 0.78, rx: 0.42, sx: 0.00005, sy: 0.00007, phase: 5.1, colorIdx: 5 }
+      ];
+
+      function createRng(seed) {
+        let s = seed >>> 0;
+        return () => {
+          s = (s * 1664525 + 1013904223) >>> 0;
+          return s / 4294967296;
+        };
+      }
+
+      function getRgb(idx) {
+        const len = activeLogoRgb.length || 1;
+        return activeLogoRgb[((idx % len) + len) % len];
+      }
+
+      function buildThreads() {
+        const rng = createRng(7845129);
+        threads = [];
+
+        for (let i = 0; i < THREAD_COUNT; i++) {
+          const angle = rng() * Math.PI * 2; // Full 360° random orientation
+          threads.push({
+            angle,
+            anchorX: 0.05 + rng() * 0.90,
+            anchorY: 0.05 + rng() * 0.90,
+            bend1: (rng() - 0.5) * 0.48,
+            bend2: (rng() - 0.5) * 0.48,
+            driftAmp: 10 + rng() * 18,
+            driftSpeed: 0.00014 + rng() * 0.00022,
+            phase: rng() * Math.PI * 2,
+            lineWidth: 0.75 + rng() * 0.85,
+            // Atmospheric low opacity (0.06 to 0.18)
+            alphaDark: 0.08 + rng() * 0.10,
+            alphaLight: 0.06 + rng() * 0.09,
+            colorIdx: i,
+            disp1X: 0,
+            disp1Y: 0,
+            disp2X: 0,
+            disp2Y: 0,
+            glowEnergy: 0,
+            glowColorIdx: i
+          });
+        }
+      }
+
+      function spawnPlume(x, y, vx, vy, radiusStart, radiusEnd, lifeMs, colorIdx, peakAlpha) {
+        if (plumes.length >= MAX_PLUMES) plumes.shift();
+        const speed = Math.hypot(vx, vy);
+        const angle = speed > 0.04 ? Math.atan2(vy, vx) : Math.random() * Math.PI * 2;
+        const stretch = Math.min(2.35, 1 + speed * 0.25);
+
+        plumes.push({
+          x,
+          y,
+          vx,
+          vy,
+          angle,
+          stretch,
+          radiusStart,
+          radiusEnd,
+          age: 0,
+          life: lifeMs,
+          colorIdx,
+          peakAlpha,
+          curlSign: Math.random() < 0.5 ? -1 : 1,
+          curlSpeed: 0.5 + Math.random() * 0.8,
+          seed: Math.random() * Math.PI * 2
+        });
+      }
+
+      function triggerTapBloom(x, y) {
+        const base = colorCursor;
+        colorCursor = (colorCursor + 2) % activeLogoRgb.length;
+
+        spawnPlume(x, y, 0, 0, 38, 235, 2550, base, 0.50);
+
+        const petals = 7;
+        for (let i = 0; i < petals; i++) {
+          const theta = (i / petals) * Math.PI * 2 + (Math.random() - 0.5) * 0.42;
+          const spd = 0.62 + Math.random() * 1.15;
+          const cIdx = (base + (i % 3)) % activeLogoRgb.length;
+          spawnPlume(
+            x + Math.cos(theta) * (10 + Math.random() * 12),
+            y + Math.sin(theta) * (10 + Math.random() * 12),
+            Math.cos(theta) * spd,
+            Math.sin(theta) * spd,
+            30 + Math.random() * 18,
+            170 + Math.random() * 88,
+            2200 + Math.random() * 550,
+            cIdx,
+            0.38 + Math.random() * 0.12
+          );
+        }
+      }
+
+      function triggerDragPlumes(x, y, dx, dy) {
+        const dist = Math.hypot(dx, dy);
+        if (dist < 4) return;
+
+        const cdx = Math.max(-28, Math.min(28, dx));
+        const cdy = Math.max(-28, Math.min(28, dy));
+        const vx = cdx * 0.085;
+        const vy = cdy * 0.085;
+        const perpX = -vy * 0.34;
+        const perpY = vx * 0.34;
+
+        const c1 = colorCursor % activeLogoRgb.length;
+        const c2 = (colorCursor + 1) % activeLogoRgb.length;
+        colorCursor = (colorCursor + 1) % activeLogoRgb.length;
+
+        spawnPlume(
+          x,
+          y,
+          vx,
+          vy,
+          32 + Math.min(22, dist * 0.36),
+          170 + Math.min(95, dist * 2.0),
+          2200 + Math.random() * 480,
+          c1,
+          0.42
+        );
+
+        if (dist > 10) {
+          spawnPlume(
+            x - dx * 0.30 + (Math.random() - 0.5) * 12,
+            y - dy * 0.30 + (Math.random() - 0.5) * 12,
+            vx * 0.65 + perpX * (Math.random() < 0.5 ? 1 : -1),
+            vy * 0.65 + perpY * (Math.random() < 0.5 ? 1 : -1),
+            26,
+            145 + Math.random() * 62,
+            2300 + Math.random() * 440,
+            c2,
+            0.34
+          );
+        }
+      }
+
+      function resize() {
+        dpr = Math.min(window.devicePixelRatio || 1, 1.75);
+        width = window.innerWidth;
+        height = window.innerHeight;
+        canvas.width = Math.round(width * dpr);
+        canvas.height = Math.round(height * dpr);
+        ctx.setTransform(dpr, 0, 0, dpr, 0, 0);
+      }
+
+      function render(now) {
+        const dtMs = Math.min(40, Math.max(8, now - lastFrameTime));
+        lastFrameTime = now;
+        elapsedTotal += dtMs;
+        const dtNorm = dtMs / 16.667;
+        const isDark = SystemTheme.isDark();
+
+        ctx.clearRect(0, 0, width, height);
+        const diag = Math.hypot(width, height);
+
+        // Gentle ambient dye plume every ~2.5s so glassmorphism subtly glows even while idle
+        if (elapsedTotal >= nextAmbientPlumeAt) {
+          nextAmbientPlumeAt = elapsedTotal + 2300 + Math.random() * 1400;
+          const ax = width * (0.18 + Math.random() * 0.64);
+          const ay = height * (0.20 + Math.random() * 0.60);
+          const ang = Math.random() * Math.PI * 2;
+          const cIdx = colorCursor % activeLogoRgb.length;
+          colorCursor = (colorCursor + 1) % activeLogoRgb.length;
+          spawnPlume(ax, ay, Math.cos(ang) * 0.34, Math.sin(ang) * 0.34, 56, 225, 3400, cIdx, 0.24);
+        }
+
+        // LAYER 1: Ambient Slow-Drifting Logo-Color Clouds
+        ctx.globalCompositeOperation = 'source-over';
+        for (let i = 0; i < ambientClouds.length; i++) {
+          const cl = ambientClouds[i];
+          const rgb = getRgb(cl.colorIdx);
+          const cx = (cl.cx + Math.sin(elapsedTotal * cl.sx + cl.phase) * 0.09) * width;
+          const cy = (cl.cy + Math.cos(elapsedTotal * cl.sy + cl.phase) * 0.09) * height;
+          const rad = diag * cl.rx;
+          const alpha = isDark ? 0.14 : 0.12;
+
+          const grad = ctx.createRadialGradient(cx, cy, 0, cx, cy, rad);
+          grad.addColorStop(0, `rgba(${rgb[0]}, ${rgb[1]}, ${rgb[2]}, ${alpha})`);
+          grad.addColorStop(0.55, `rgba(${rgb[0]}, ${rgb[1]}, ${rgb[2]}, ${(alpha * 0.40).toFixed(4)})`);
+          grad.addColorStop(1, `rgba(${rgb[0]}, ${rgb[1]}, ${rgb[2]}, 0)`);
+
+          ctx.fillStyle = grad;
+          ctx.beginPath();
+          ctx.arc(cx, cy, rad, 0, Math.PI * 2);
+          ctx.fill();
+        }
+
+        // LAYER 2: Touch-Reactive Silk-Dye Fluid Plumes (6 Logo Colors Only)
+        ctx.globalCompositeOperation = isDark ? 'screen' : 'source-over';
+
+        for (let i = plumes.length - 1; i >= 0; i--) {
+          const p = plumes[i];
+          p.age += dtMs;
+          if (p.age >= p.life) {
+            plumes.splice(i, 1);
+            continue;
+          }
+
+          const t = p.age / p.life;
+          const easeOut = 1 - Math.pow(1 - t, 3);
+
+          const curlTheta = p.seed + t * 2.1 * p.curlSpeed * p.curlSign;
+          const curlPush = 0.05 * (1 - t);
+          p.vx = p.vx * Math.pow(0.968, dtNorm) + Math.cos(curlTheta) * curlPush * dtNorm;
+          p.vy = p.vy * Math.pow(0.968, dtNorm) + Math.sin(curlTheta) * curlPush * dtNorm;
+          p.x += p.vx * dtNorm;
+          p.y += p.vy * dtNorm;
+
+          const curStretch = 1 + (p.stretch - 1) * (1 - easeOut * 0.72);
+          const curRadius = p.radiusStart + (p.radiusEnd - p.radiusStart) * easeOut;
+
+          const fadeIn = Math.min(1, t / 0.10);
+          const fadeOut = Math.pow(1 - t, 1.7);
+          const modeBoost = isDark ? 1.15 : 0.92;
+          const alpha = Math.min(0.62, p.peakAlpha * fadeIn * fadeOut * modeBoost);
+          if (alpha <= 0.002) continue;
+
+          const rgb = getRgb(p.colorIdx);
+          ctx.save();
+          ctx.translate(p.x, p.y);
+          ctx.rotate(p.angle + p.curlSign * t * 0.4);
+          ctx.scale(curStretch, 1 / Math.sqrt(curStretch));
+
+          const grad = ctx.createRadialGradient(0, 0, 0, 0, 0, curRadius);
+          grad.addColorStop(0, `rgba(${rgb[0]}, ${rgb[1]}, ${rgb[2]}, ${alpha.toFixed(4)})`);
+          grad.addColorStop(0.45, `rgba(${rgb[0]}, ${rgb[1]}, ${rgb[2]}, ${(alpha * 0.58).toFixed(4)})`);
+          grad.addColorStop(0.78, `rgba(${rgb[0]}, ${rgb[1]}, ${rgb[2]}, ${(alpha * 0.16).toFixed(4)})`);
+          grad.addColorStop(1, `rgba(${rgb[0]}, ${rgb[1]}, ${rgb[2]}, 0)`);
+
+          ctx.fillStyle = grad;
+          ctx.beginPath();
+          ctx.arc(0, 0, curRadius, 0, Math.PI * 2);
+          ctx.fill();
+          ctx.restore();
+        }
+
+        // LAYER 3: 32 Random 360° Yarn Threads (Higher opacity on Hero, smooth flow fade to Contacts)
+        ctx.globalCompositeOperation = 'source-over';
+        const halfSpan = diag * 0.72;
+        const sampleStart = Math.max(0, plumes.length - 12);
+
+        // Smoothly glide thread visibility along the flow curve frame-by-frame
+        flowHeroFactor += (targetHeroFactor - flowHeroFactor) * (1 - Math.pow(0.86, dtNorm));
+        const heroOpacityMultiplier = 1 + flowHeroFactor * 1.95; // Stronger presence on Page 1 -> subtle on Page 2+
+        const maxThreadAlpha = 0.24 + flowHeroFactor * 0.34;     // 0.58 cap on Page 1 -> 0.24 cap on Page 2+
+        const heroWidthBoost = flowHeroFactor * 0.38;
+
+        for (let i = 0; i < threads.length; i++) {
+          const th = threads[i];
+          const cosA = Math.cos(th.angle);
+          const sinA = Math.sin(th.angle);
+          const perpX = -sinA;
+          const perpY = cosA;
+
+          const ax = th.anchorX * width;
+          const ay = th.anchorY * height;
+
+          const x0 = ax - cosA * halfSpan;
+          const y0 = ay - sinA * halfSpan;
+          const x3 = ax + cosA * halfSpan;
+          const y3 = ay + sinA * halfSpan;
+
+          const drift1 = Math.sin(elapsedTotal * th.driftSpeed + th.phase) * th.driftAmp;
+          const drift2 = Math.cos(elapsedTotal * th.driftSpeed * 0.85 + th.phase * 1.3) * th.driftAmp;
+
+          let cx1 = ax - cosA * (halfSpan * 0.34) + perpX * (th.bend1 * diag * 0.34 + drift1);
+          let cy1 = ay - sinA * (halfSpan * 0.34) + perpY * (th.bend1 * diag * 0.34 + drift1);
+          let cx2 = ax + cosA * (halfSpan * 0.34) + perpX * (th.bend2 * diag * 0.34 + drift2);
+          let cy2 = ay + sinA * (halfSpan * 0.34) + perpY * (th.bend2 * diag * 0.34 + drift2);
+
+          let target1X = 0, target1Y = 0, target2X = 0, target2Y = 0;
+          let targetGlow = 0;
+          let glowColor = th.glowColorIdx;
+
+          for (let pIdx = sampleStart; pIdx < plumes.length; pIdx++) {
+            const p = plumes[pIdx];
+            const lifeFade = Math.max(0, 1 - p.age / p.life);
+            if (lifeFade < 0.08) continue;
+
+            const influence = 190;
+            const dx1 = cx1 - p.x;
+            const dy1 = cy1 - p.y;
+            const d1 = Math.hypot(dx1, dy1);
+            if (d1 < influence && d1 > 1) {
+              const strength = Math.pow(1 - d1 / influence, 2) * lifeFade;
+              target1X += (dx1 / d1) * strength * 20 + p.vx * strength * 3.5;
+              target1Y += (dy1 / d1) * strength * 20 + p.vy * strength * 3.5;
+              if (strength > targetGlow) {
+                targetGlow = strength;
+                glowColor = p.colorIdx;
+              }
+            }
+
+            const dx2 = cx2 - p.x;
+            const dy2 = cy2 - p.y;
+            const d2 = Math.hypot(dx2, dy2);
+            if (d2 < influence && d2 > 1) {
+              const strength = Math.pow(1 - d2 / influence, 2) * lifeFade;
+              target2X += (dx2 / d2) * strength * 20 + p.vx * strength * 3.5;
+              target2Y += (dy2 / d2) * strength * 20 + p.vy * strength * 3.5;
+              if (strength > targetGlow) {
+                targetGlow = strength;
+                glowColor = p.colorIdx;
+              }
+            }
+          }
+
+          // Smooth overdamped easing — zero elastic bounce
+          const damp = 1 - Math.pow(0.945, dtNorm);
+          th.disp1X += (Math.max(-24, Math.min(24, target1X)) - th.disp1X) * damp;
+          th.disp1Y += (Math.max(-24, Math.min(24, target1Y)) - th.disp1Y) * damp;
+          th.disp2X += (Math.max(-24, Math.min(24, target2X)) - th.disp2X) * damp;
+          th.disp2Y += (Math.max(-24, Math.min(24, target2Y)) - th.disp2Y) * damp;
+          th.glowEnergy += (Math.min(1, targetGlow) - th.glowEnergy) * (1 - Math.pow(0.93, dtNorm));
+          if (targetGlow > 0.14) th.glowColorIdx = glowColor;
+
+          cx1 += th.disp1X;
+          cy1 += th.disp1Y;
+          cx2 += th.disp2X;
+          cy2 += th.disp2Y;
+
+          const baseAlpha = (isDark ? th.alphaDark : th.alphaLight) * heroOpacityMultiplier;
+          const finalAlpha = Math.min(maxThreadAlpha, baseAlpha + th.glowEnergy * (isDark ? 0.11 : 0.09));
+          const rgb = getRgb(th.glowEnergy > 0.12 ? th.glowColorIdx : th.colorIdx);
+
+          ctx.beginPath();
+          ctx.moveTo(x0, y0);
+          ctx.bezierCurveTo(cx1, cy1, cx2, cy2, x3, y3);
+          ctx.strokeStyle = `rgba(${rgb[0]}, ${rgb[1]}, ${rgb[2]}, ${finalAlpha.toFixed(3)})`;
+          ctx.lineWidth = th.lineWidth + heroWidthBoost + th.glowEnergy * 0.4;
+          ctx.lineCap = 'round';
+          ctx.stroke();
+        }
+
+        requestAnimationFrame(render);
+      }
+
+      function bindPassiveListeners() {
+        const shouldSkipDuplicate = (source) => {
+          const now = performance.now();
+          if (source !== lastInputSource && now - lastInputStamp < 32) return true;
+          lastInputSource = source;
+          lastInputStamp = now;
+          return false;
+        };
+
+        const handleStart = (x, y, source) => {
+          if (shouldSkipDuplicate(source)) return;
+          lastPointerX = x;
+          lastPointerY = y;
+          hasLastPointer = true;
+          triggerTapBloom(x, y);
+        };
+
+        const handleMove = (x, y, source, isActive) => {
+          if (shouldSkipDuplicate(source)) return;
+          if (!hasLastPointer) {
+            lastPointerX = x;
+            lastPointerY = y;
+            hasLastPointer = true;
+            return;
+          }
+          const dx = x - lastPointerX;
+          const dy = y - lastPointerY;
+          const dist = Math.hypot(dx, dy);
+          if (dist >= (isActive ? 9 : 16)) {
+            triggerDragPlumes(x, y, dx, dy);
+            lastPointerX = x;
+            lastPointerY = y;
+          }
+        };
+
+        const handleEnd = () => {
+          hasLastPointer = false;
+        };
+
+        window.addEventListener('pointerdown', (e) => {
+          handleStart(e.clientX, e.clientY, 'pointer');
+        }, { passive: true });
+
+        window.addEventListener('pointermove', (e) => {
+          const isPressed = e.buttons > 0 || e.pointerType === 'touch';
+          handleMove(e.clientX, e.clientY, 'pointer', isPressed);
+        }, { passive: true });
+
+        window.addEventListener('pointerup', handleEnd, { passive: true });
+        window.addEventListener('pointercancel', handleEnd, { passive: true });
+
+        window.addEventListener('touchstart', (e) => {
+          if (e.touches.length > 0) {
+            handleStart(e.touches[0].clientX, e.touches[0].clientY, 'touch');
+          }
+        }, { passive: true });
+
+        window.addEventListener('touchmove', (e) => {
+          if (e.touches.length > 0) {
+            handleMove(e.touches[0].clientX, e.touches[0].clientY, 'touch', true);
+          }
+        }, { passive: true });
+
+        window.addEventListener('touchend', handleEnd, { passive: true });
+        window.addEventListener('touchcancel', handleEnd, { passive: true });
+      }
+
+      function init() {
+        buildThreads();
+        resize();
+        window.addEventListener('resize', resize, { passive: true });
+        bindPassiveListeners();
+
+        // Soft initial logo-color bloom so cards immediately catch vivid color refraction
+        setTimeout(() => {
+          triggerTapBloom(width * 0.5, height * 0.44);
+        }, 160);
+
+        requestAnimationFrame(render);
+      }
+
+      return { init, triggerTapBloom, setSectionProgress };
+    })();
+
+    /* =========================================================================
+       7. SECTION 1: HERO & REAL LOGO LOADER (NO FILE INPUT OR UPLOAD BUTTON)
+       Tries ./logo.png -> ./logo.jpg -> ./logo.jpeg -> ./logo.webp.
+       Falls back cleanly to minimal "RC" gradient monogram if file isn't present yet.
+    ========================================================================= */
+    function initHeroSection() {
+      document.title = `${CARD_CONFIG.brandName} — NFC Digital Visiting Card`;
+
+      const brandLogo = document.getElementById('brandLogo');
+      const monogram = document.getElementById('brandMonogramFallback');
+      const brandNameEl = document.getElementById('hero-brand-name');
+      const specialtiesEl = document.getElementById('hero-specialties');
+      const badgeDots = document.getElementById('hero-badge-dots');
+      const divider = document.getElementById('hero-accent-divider');
+      const qrSubtitle = document.getElementById('qr-brand-subtitle');
+      const qrPillDot = document.getElementById('qr-pill-dot');
+      const toastDot = document.getElementById('toast-dot');
+
+      if (brandNameEl) brandNameEl.textContent = CARD_CONFIG.brandName;
+      if (qrSubtitle) qrSubtitle.textContent = CARD_CONFIG.brandName;
+      if (qrPillDot) qrPillDot.style.backgroundColor = CARD_CONFIG.logoColors[0];
+      if (toastDot) toastDot.style.backgroundColor = CARD_CONFIG.logoColors[3];
+
+      if (badgeDots) {
+        badgeDots.innerHTML = [CARD_CONFIG.logoColors[0], CARD_CONFIG.logoColors[2], CARD_CONFIG.logoColors[5]]
+          .map((c) => `<span class="w-1.5 h-1.5 rounded-full" style="background-color:${esc(c)}"></span>`)
+          .join('');
+      }
+
+      if (divider) {
+        divider.innerHTML = `
+          <span class="w-10 h-[2px] rounded-full opacity-80" style="background:linear-gradient(90deg,transparent,${esc(CARD_CONFIG.logoColors[0])})"></span>
+          <span class="w-2 h-2 rounded-full" style="background-color:${esc(CARD_CONFIG.logoColors[2])}"></span>
+          <span class="w-10 h-[2px] rounded-full opacity-80" style="background:linear-gradient(270deg,transparent,${esc(CARD_CONFIG.logoColors[5])})"></span>
+        `;
+      }
+
+      if (specialtiesEl) {
+        const pillAccents = [CARD_CONFIG.logoColors[0], CARD_CONFIG.logoColors[2], CARD_CONFIG.logoColors[5]];
+        specialtiesEl.innerHTML = CARD_CONFIG.specialties.map((item, idx) => `
+          <span class="inline-flex items-center gap-2 px-3.5 py-1.5 rounded-full bg-white/80 dark:bg-[#161924]/80 border border-white/85 dark:border-white/15 shadow-[0_8px_22px_rgba(15,23,42,0.08)] dark:shadow-[0_10px_24px_rgba(0,0,0,0.42)] text-xs sm:text-[13px] font-semibold text-slate-800 dark:text-slate-100">
+            <span class="w-1.5 h-1.5 rounded-full shrink-0" style="background-color:${esc(pillAccents[idx % pillAccents.length])}"></span>
+            <span>${esc(item)}</span>
           </span>
-          ${ICONS.nfc}
-          <span class="text-[11px] font-medium tracking-wide text-gold-light/95">${escapeHtml(badgeText)}</span>
-        </div>
+        `).join('');
+      }
 
-        <!-- Geometric Monogram Badge -->
-        <div class="relative w-24 h-24 mx-auto mb-4">
-          <div class="absolute inset-0 rounded-[26px] border border-gold/40 animate-pulse-ring pointer-events-none"></div>
-          <div class="relative w-full h-full rounded-[24px] p-[2px] bg-gradient-to-br from-gold-light via-gold/60 to-gold-dark/30 shadow-[0_12px_36px_rgba(212,175,55,0.2)] overflow-hidden">
-            <div class="w-full h-full rounded-[22px] overflow-hidden relative">
-              ${avatarInner}
-              <!-- Subtle Shimmer Reflection -->
-              <div class="pointer-events-none absolute inset-0 w-1/2 bg-gradient-to-r from-transparent via-white/[0.12] to-transparent animate-shimmer"></div>
-            </div>
-          </div>
-        </div>
+      // Sequential fallback chain: logoPath -> .jpg -> .jpeg -> .webp -> clean "RC" monogram
+      const fallbackSources = [
+        CARD_CONFIG.logoPath || './logo.png',
+        './logo.jpg',
+        './logo.jpeg',
+        './logo.webp'
+      ].filter((v, i, arr) => arr.indexOf(v) === i);
 
-        <!-- Brand Name & Tagline -->
-        <h1 class="text-2xl sm:text-[26px] font-extrabold tracking-tight text-white leading-tight">
-          ${escapeHtml(name)}
-        </h1>
-        <p class="text-sm text-neutral-400 mt-1.5 max-w-xs mx-auto leading-relaxed">
-          ${escapeHtml(tagline)}
-        </p>
-      `;
+      let attemptIndex = 0;
+
+      function showMonogram() {
+        if (brandLogo) {
+          brandLogo.classList.add('hidden');
+          brandLogo.classList.remove('block');
+        }
+        if (monogram) {
+          monogram.classList.remove('hidden');
+          monogram.classList.add('flex');
+        }
+      }
+
+      function onLogoSuccess() {
+        if (!brandLogo) return;
+        brandLogo.classList.remove('hidden');
+        brandLogo.classList.add('block');
+        if (monogram) {
+          monogram.classList.add('hidden');
+          monogram.classList.remove('flex');
+        }
+        tryExtractLogoColors(brandLogo);
+      }
+
+      function onLogoFail() {
+        attemptIndex++;
+        if (attemptIndex < fallbackSources.length && brandLogo) {
+          brandLogo.src = fallbackSources[attemptIndex];
+        } else {
+          showMonogram();
+        }
+      }
+
+      if (brandLogo) {
+        brandLogo.addEventListener('load', () => {
+          if (brandLogo.naturalWidth > 0) onLogoSuccess();
+          else onLogoFail();
+        });
+        brandLogo.addEventListener('error', onLogoFail);
+
+        // Handle already-resolved initial src="./logo.png"
+        if (brandLogo.complete) {
+          if (brandLogo.naturalWidth > 0) onLogoSuccess();
+          else onLogoFail();
+        }
+      }
     }
 
-    function renderContacts() {
-      const container = document.getElementById('contacts-container');
-      container.innerHTML = CARD_CONFIG.contacts.map((contact, idx) => {
-        const waUrl = buildWhatsAppUrl(contact.whatsappNumber, contact.whatsappMessage);
-        const delay = 160 + idx * 80;
+    /* =========================================================================
+       8. UNBROKEN TWO-SIBLING GLASSMORPHISM CARD BUILDERS
+       - Sibling 1: `.glass-surface` carries uniform frosted glassmorphism
+         (Light: rgba(255,255,255,0.58), Dark: rgba(22,25,36,0.56), blur(28px) saturate(185%))
+         and NEVER receives `filter: blur()`.
+       - Sibling 2: `.card-content` holds text/actions and receives smooth depth &
+         motion blur without ever slicing or cutting card transparency.
+    ========================================================================= */
+    const GLASS_SURFACE_HTML = `
+      <div
+        aria-hidden="true"
+        class="glass-surface absolute inset-0 rounded-[inherit] z-0 pointer-events-none bg-[rgba(255,255,255,0.62)] dark:bg-[rgba(18,20,28,0.60)] backdrop-blur-[32px] backdrop-saturate-[185%] border border-[rgba(255,255,255,0.78)] dark:border-[rgba(255,255,255,0.18)] shadow-[0_22px_54px_rgba(15,23,42,0.10),inset_0_1px_0_rgba(255,255,255,0.92)] dark:shadow-[0_24px_60px_rgba(0,0,0,0.48),inset_0_1px_0_rgba(255,255,255,0.20)]"
+      ></div>
+    `;
 
-        return `
-          <article
-            class="relative overflow-hidden rounded-2xl bg-surface/85 backdrop-blur-xl border border-white/[0.08] hover:border-gold/35 p-4 shadow-[0_10px_35px_rgba(0,0,0,0.45)] transition-all duration-300 animate-fade-up"
-            style="animation-delay: ${delay}ms;"
-          >
-            <!-- Top Subtle Accent Line -->
-            <div class="absolute top-0 left-6 right-6 h-[1px] bg-gradient-to-r from-transparent via-gold/40 to-transparent"></div>
+    function buildContactCardHtml(contact, contactIndex, accentHex, accentHex2) {
+      const waHref = buildWhatsAppUrl(contact.whatsappNumber, contact.whatsappText);
+      const initials = getInitials(contact.name);
 
-            <!-- Person Identity Row -->
-            <div class="flex items-start justify-between gap-3 mb-3.5">
-              <div class="flex items-center gap-3 min-w-0">
-                <div class="w-11 h-11 rounded-xl shrink-0 bg-gradient-to-br from-gold/20 to-gold/5 border border-gold/30 flex items-center justify-center text-sm font-bold text-gold-light">
-                  ${escapeHtml(getInitials(contact.name))}
-                </div>
-                <div class="min-w-0">
-                  <h3 class="text-[15px] font-bold text-white truncate">${escapeHtml(contact.name)}</h3>
-                  <p class="text-xs text-neutral-400 truncate mt-0.5">${escapeHtml(contact.role)}</p>
-                </div>
-              </div>
-              ${contact.badge ? `
-                <span class="shrink-0 px-2.5 py-0.5 rounded-full text-[10px] font-semibold uppercase tracking-wider bg-white/[0.06] text-gold-light/90 border border-white/[0.08]">
-                  ${escapeHtml(contact.badge)}
-                </span>
-              ` : ''}
-            </div>
+      return `
+        <article class="glass-card relative w-full h-full rounded-[32px] overflow-hidden text-slate-900 dark:text-slate-100">
+          ${GLASS_SURFACE_HTML}
 
-            <!-- Phone Number Display + Copy Button -->
-            <div class="flex items-center justify-between gap-2 px-3 py-2 rounded-xl bg-black/45 border border-white/[0.06] mb-3.5">
-              <span class="text-sm font-semibold tracking-wide text-neutral-200 tabular-nums select-all">
-                ${escapeHtml(contact.phoneDisplay)}
+          <!-- Sibling 2: Content layer (depth & motion blur applied strictly here) -->
+          <div class="card-content relative z-[1] h-full flex flex-col justify-between p-6 sm:p-7 will-change-[filter,opacity]">
+            <!-- Top Row: Badge + Initials Avatar -->
+            <div class="flex items-center justify-between gap-3">
+              <span class="inline-flex items-center gap-2 px-3.5 py-1.5 rounded-full bg-white/75 dark:bg-white/[0.10] border border-slate-900/[0.08] dark:border-white/[0.15] text-[10px] font-bold uppercase tracking-[0.18em] text-slate-900 dark:text-white">
+                <span class="w-1.5 h-1.5 rounded-full" style="background-color:${esc(accentHex)}"></span>
+                <span>${esc(contact.badge)}</span>
               </span>
-              <button
-                type="button"
-                data-copy-phone="${escapeHtml(contact.phoneRaw)}"
-                aria-label="Copy phone number"
-                class="copy-phone-btn inline-flex items-center gap-1.5 px-2.5 py-1 rounded-lg bg-white/[0.06] hover:bg-white/[0.12] border border-white/[0.08] text-[11px] font-medium text-neutral-300 active:scale-95 transition-all"
+              <div
+                class="w-11 h-11 rounded-2xl flex items-center justify-center text-sm font-extrabold tracking-tight text-white shadow-md"
+                style="background:linear-gradient(135deg,${esc(accentHex)},${esc(accentHex2)})"
               >
-                <span class="copy-icon">${ICONS.copy}</span>
-                <span class="copy-label">Copy</span>
-              </button>
+                ${esc(initials)}
+              </div>
             </div>
 
-            <!-- 3 Crisp Action Buttons: Call, WhatsApp, Save Contact -->
-            <div class="grid grid-cols-3 gap-2">
+            <!-- Middle Identity & Clickable Phone Bar -->
+            <div class="my-auto py-3">
+              <p class="text-[11px] font-bold uppercase tracking-[0.16em] text-slate-600 dark:text-slate-300">
+                ${esc(CARD_CONFIG.brandName)}
+              </p>
+              <h2 class="text-[27px] sm:text-[30px] font-extrabold tracking-[-0.025em] text-slate-900 dark:text-white mt-1 leading-[1.12]">
+                ${esc(contact.name)}
+              </h2>
+              <p class="text-sm font-semibold text-slate-700 dark:text-slate-300 mt-1.5">
+                ${esc(contact.role)}
+              </p>
+
+              <!-- Direct Click-to-Call Phone Bar -->
               <a
-                href="tel:${escapeHtml(contact.phoneRaw)}"
-                class="flex flex-col sm:flex-row items-center justify-center gap-1.5 py-2.5 px-2 rounded-xl bg-gold/15 hover:bg-gold/25 border border-gold/30 text-gold-light text-xs font-semibold active:scale-95 transition-all"
+                href="tel:${esc(contact.phoneRaw)}"
+                class="mt-5 w-full flex items-center justify-between gap-3 px-4 py-3.5 rounded-2xl bg-white/75 hover:bg-white/90 dark:bg-white/[0.10] dark:hover:bg-white/[0.16] border border-slate-900/[0.08] dark:border-white/[0.15] active:scale-[0.99] transition-all duration-300 ease-silk"
               >
-                ${ICONS.phone}
-                <span>Call</span>
+                <span class="flex items-center gap-3 min-w-0">
+                  <span class="w-9 h-9 rounded-xl bg-white dark:bg-white/[0.14] shadow-sm flex items-center justify-center shrink-0" style="color:${esc(accentHex)}">
+                    ${ICONS.phone}
+                  </span>
+                  <span class="text-[15px] font-bold tracking-wide text-slate-900 dark:text-white tabular-nums truncate">
+                    ${esc(contact.phoneDisplay)}
+                  </span>
+                </span>
+                <span class="text-[11px] font-extrabold uppercase tracking-wider shrink-0" style="color:${esc(accentHex)}">
+                  Call
+                </span>
               </a>
 
+              <p class="mt-3.5 px-1 text-[11px] font-semibold text-slate-600 dark:text-slate-300 truncate">
+                ${esc(CARD_CONFIG.slogan)}
+              </p>
+            </div>
+
+            <!-- Bottom Actions: Save Contact (.vcf) + WhatsApp -->
+            <div class="grid grid-cols-2 gap-3 pt-1">
+              <button
+                type="button"
+                data-save-contact-index="${contactIndex}"
+                class="flex items-center justify-center gap-2 py-4 px-3.5 rounded-2xl bg-slate-900 hover:bg-slate-800 dark:bg-white dark:hover:bg-slate-100 text-white dark:text-slate-900 text-[13px] font-bold shadow-[0_12px_26px_rgba(15,23,42,0.24)] dark:shadow-[0_12px_28px_rgba(255,255,255,0.16)] active:scale-[0.98] transition-all duration-300 ease-silk cursor-pointer"
+              >
+                ${ICONS.saveContact}
+                <span>Save Contact</span>
+              </button>
+
               <a
-                href="${escapeHtml(waUrl)}"
+                href="${esc(waHref)}"
                 target="_blank"
                 rel="noopener noreferrer"
-                class="flex flex-col sm:flex-row items-center justify-center gap-1.5 py-2.5 px-2 rounded-xl bg-whatsapp/15 hover:bg-whatsapp/25 border border-whatsapp/30 text-[#4ADE80] text-xs font-semibold active:scale-95 transition-all"
+                class="flex items-center justify-center gap-2 py-4 px-3.5 rounded-2xl bg-[#22C55E] hover:bg-[#16A34A] text-white text-[13px] font-bold shadow-[0_12px_26px_rgba(34,197,94,0.34)] active:scale-[0.98] transition-all duration-300 ease-silk"
               >
                 ${ICONS.whatsapp}
                 <span>WhatsApp</span>
               </a>
-
-              <button
-                type="button"
-                data-save-idx="${idx}"
-                class="save-vcard-btn flex flex-col sm:flex-row items-center justify-center gap-1.5 py-2.5 px-2 rounded-xl bg-white/[0.08] hover:bg-white/[0.14] border border-white/[0.14] text-white text-xs font-semibold active:scale-95 transition-all"
-              >
-                ${ICONS.saveUser}
-                <span>Save</span>
-              </button>
             </div>
-          </article>
-        `;
-      }).join('');
+          </div>
+        </article>
+      `;
+    }
 
-      // Attach Copy Phone Listeners
-      container.querySelectorAll('.copy-phone-btn').forEach((btn) => {
-        btn.addEventListener('click', () => {
-          const phone = btn.getAttribute('data-copy-phone');
-          const ok = copyTextToClipboard(phone);
-          if (ok) {
-            showToast('Number copied');
-            const iconEl = btn.querySelector('.copy-icon');
-            const labelEl = btn.querySelector('.copy-label');
-            iconEl.innerHTML = ICONS.check;
-            labelEl.textContent = 'Copied';
-            setTimeout(() => {
-              iconEl.innerHTML = ICONS.copy;
-              labelEl.textContent = 'Copy';
-            }, 1600);
+    function buildLocationCardHtml(accentHex, accentHex2) {
+      const loc = CARD_CONFIG.location;
+      const gMaps = getGoogleMapsUrl(loc);
+      const aMaps = getAppleMapsUrl(loc);
+
+      return `
+        <article class="glass-card relative w-full h-full rounded-[32px] overflow-hidden text-slate-900 dark:text-slate-100">
+          ${GLASS_SURFACE_HTML}
+
+          <!-- Sibling 2: Content layer (depth & motion blur applied strictly here) -->
+          <div class="card-content relative z-[1] h-full flex flex-col justify-between p-6 sm:p-7 will-change-[filter,opacity]">
+            <!-- Top Row -->
+            <div class="flex items-center justify-between gap-3">
+              <span class="inline-flex items-center gap-2 px-3.5 py-1.5 rounded-full bg-white/75 dark:bg-white/[0.10] border border-slate-900/[0.08] dark:border-white/[0.15] text-[10px] font-bold uppercase tracking-[0.18em] text-slate-900 dark:text-white">
+                <span class="w-1.5 h-1.5 rounded-full" style="background-color:${esc(accentHex)}"></span>
+                <span>${esc(loc.badge)}</span>
+              </span>
+              <div
+                class="w-11 h-11 rounded-2xl flex items-center justify-center text-white shadow-md"
+                style="background:linear-gradient(135deg,${esc(accentHex)},${esc(accentHex2)})"
+              >
+                ${ICONS.googleMaps}
+              </div>
+            </div>
+
+            <!-- Middle Address Block -->
+            <div class="my-auto py-3">
+              <p class="text-[11px] font-bold uppercase tracking-[0.16em] text-slate-600 dark:text-slate-300">
+                ${esc(CARD_CONFIG.brandName)}
+              </p>
+              <h2 class="text-[26px] sm:text-[29px] font-extrabold tracking-[-0.025em] text-slate-900 dark:text-white mt-1 leading-[1.12]">
+                ${esc(loc.title)}
+              </h2>
+
+              <div class="mt-4 p-4 rounded-2xl bg-white/75 dark:bg-white/[0.10] border border-slate-900/[0.08] dark:border-white/[0.15]">
+                <p class="text-[10px] font-bold uppercase tracking-[0.16em] mb-1.5" style="color:${esc(accentHex)}">
+                  Address
+                </p>
+                <p class="text-sm font-bold text-slate-900 dark:text-white leading-relaxed">
+                  ${esc(loc.addressLine1)}
+                </p>
+                ${loc.addressLine2 ? `<p class="text-sm font-semibold text-slate-600 dark:text-slate-300 mt-0.5">${esc(loc.addressLine2)}</p>` : ''}
+              </div>
+
+              <p class="mt-3.5 px-1 text-[11px] font-semibold text-slate-600 dark:text-slate-300">
+                Tap below to open turn-by-turn directions
+              </p>
+            </div>
+
+            <!-- Bottom Actions: Google Maps + Apple Maps -->
+            <div class="grid grid-cols-2 gap-3 pt-1">
+              <a
+                href="${esc(gMaps)}"
+                target="_blank"
+                rel="noopener noreferrer"
+                class="flex items-center justify-center gap-2 py-4 px-3.5 rounded-2xl bg-slate-900 hover:bg-slate-800 dark:bg-white dark:hover:bg-slate-100 text-white dark:text-slate-900 text-[13px] font-bold shadow-[0_12px_26px_rgba(15,23,42,0.24)] dark:shadow-[0_12px_28px_rgba(255,255,255,0.16)] active:scale-[0.98] transition-all duration-300 ease-silk"
+              >
+                ${ICONS.googleMaps}
+                <span>Google Maps</span>
+              </a>
+
+              <a
+                href="${esc(aMaps)}"
+                target="_blank"
+                rel="noopener noreferrer"
+                class="flex items-center justify-center gap-2 py-4 px-3.5 rounded-2xl text-white text-[13px] font-bold shadow-[0_12px_26px_rgba(6,182,212,0.32)] active:scale-[0.98] transition-all duration-300 ease-silk"
+                style="background:linear-gradient(135deg,${esc(accentHex)},${esc(accentHex2)})"
+              >
+                ${ICONS.appleMaps}
+                <span>Apple Maps</span>
+              </a>
+            </div>
+          </div>
+        </article>
+      `;
+    }
+
+    /* =========================================================================
+       9. 3-CARD CIRCULAR CAROUSEL — ZERO PRESERVE-3D, ZERO BOUNCE (780ms easeOutQuart)
+    ========================================================================= */
+    const CarouselOrbit = (() => {
+      const ringEl = document.getElementById('carousel-ring');
+      const dotsEl = document.getElementById('carousel-dots');
+      const activeLabelEl = document.getElementById('carousel-active-label');
+      const activeDotEl = document.getElementById('carousel-active-dot');
+
+      const COUNT = 3;
+      const STEP_DEG = 360 / COUNT; // 120°
+      const SNAP_DURATION_MS = 780;
+
+      const TAB_LABELS = [
+        CARD_CONFIG.contacts[0].tabLabel,
+        CARD_CONFIG.contacts[1].tabLabel,
+        CARD_CONFIG.location.tabLabel
+      ];
+      const TAB_ACCENTS = [
+        CARD_CONFIG.logoColors[0],
+        CARD_CONFIG.logoColors[1],
+        CARD_CONFIG.logoColors[2]
+      ];
+
+      let cardNodes = [];
+      let contentNodes = [];
+      let dotNodes = [];
+
+      let cardWidth = 360;
+      let cardHeight = 440;
+      let orbitX = 240;
+
+      let currentAngle = 0;
+      let prevRenderedAngle = 0;
+      let smoothMotionBlur = 0;
+      let verticalTransitionBlur = 0;
+      let verticalTransitionOpacity = 1;
+      let activeIndex = 0;
+
+      let isAnimating = false;
+      let animStartAngle = 0;
+      let animEndAngle = 0;
+      let animStartTime = 0;
+      let rafId = null;
+
+      let dragStartAngle = 0;
+      let dragVelocityDegPerMs = 0;
+      let isHorizontalDragging = false;
+      let suppressClick = false;
+
+      function easeOutQuart(t) {
+        return 1 - Math.pow(1 - t, 4);
+      }
+
+      function normalizeAngle(deg) {
+        let a = ((deg % 360) + 360) % 360;
+        if (a > 180) a -= 360;
+        return a;
+      }
+
+      function getFrontIndex(angle) {
+        const raw = Math.round(-angle / STEP_DEG);
+        return ((raw % COUNT) + COUNT) % COUNT;
+      }
+
+      function computeLayout() {
+        const vw = window.innerWidth;
+        const vh = window.innerHeight;
+
+        cardWidth = Math.min(Math.round(vw * 0.86), 375);
+        cardHeight = vh < 630
+          ? Math.max(380, vh - 196)
+          : Math.min(462, Math.max(440, vh - 210));
+
+        if (vw < 480) {
+          orbitX = Math.round(cardWidth * 0.62);
+        } else if (vw < 860) {
+          orbitX = Math.round(cardWidth * 0.72);
+        } else {
+          orbitX = Math.round(cardWidth * 0.84);
+        }
+
+        ringEl.style.width = `${cardWidth}px`;
+        ringEl.style.height = `${cardHeight}px`;
+
+        cardNodes.forEach((node) => {
+          node.style.width = `${cardWidth}px`;
+          node.style.height = `${cardHeight}px`;
+        });
+
+        renderFrame(0);
+      }
+
+      function updateIndicators(idx) {
+        if (activeLabelEl) activeLabelEl.textContent = TAB_LABELS[idx] || '';
+        if (activeDotEl) activeDotEl.style.backgroundColor = TAB_ACCENTS[idx] || CARD_CONFIG.logoColors[0];
+
+        dotNodes.forEach((dot, i) => {
+          const isCurrent = i === idx;
+          dot.setAttribute('aria-selected', isCurrent ? 'true' : 'false');
+          dot.className = isCurrent
+            ? 'inline-flex items-center gap-1.5 px-3.5 py-1.5 rounded-full bg-slate-900 text-white dark:bg-white dark:text-slate-900 text-[11px] font-bold tracking-wide shadow-sm transition-all duration-300 cursor-pointer'
+            : 'inline-flex items-center gap-1.5 px-3 py-1.5 rounded-full text-slate-700 dark:text-slate-300 hover:text-slate-900 dark:hover:text-white text-[11px] font-semibold tracking-wide transition-all duration-300 cursor-pointer';
+        });
+      }
+
+      function renderFrame(angularDeltaAbs) {
+        const nearest = getFrontIndex(currentAngle);
+        if (nearest !== activeIndex) {
+          activeIndex = nearest;
+          updateIndicators(activeIndex);
+        }
+
+        const targetMotionBlur = Math.min(4.6, angularDeltaAbs * 0.56);
+        smoothMotionBlur += (targetMotionBlur - smoothMotionBlur) * 0.24;
+        if (smoothMotionBlur < 0.04) smoothMotionBlur = 0;
+
+        for (let i = 0; i < COUNT; i++) {
+          const node = cardNodes[i];
+          const content = contentNodes[i];
+          const relDeg = normalizeAngle(i * STEP_DEG + currentAngle);
+          const absDeg = Math.abs(relDeg);
+          const rad = (relDeg * Math.PI) / 180;
+
+          const sinR = Math.sin(rad);
+          const cosR = Math.cos(rad);
+          const depth = (1 - cosR) * 0.5; // 0 front -> 1 rear
+
+          const x = sinR * orbitX;
+          const y = depth * 18;
+          const scale = 1 - depth * 0.16;
+
+          node.style.transform = `translate3d(${x.toFixed(2)}px, ${y.toFixed(2)}px, 0px) scale(${scale.toFixed(4)})`;
+          node.style.zIndex = String(Math.round(100 + cosR * 50));
+
+          const isFront = absDeg < 24;
+          node.dataset.front = isFront ? 'true' : 'false';
+          node.style.cursor = isFront ? 'default' : 'pointer';
+
+          // Depth + velocity blur applied strictly to `.card-content` (NEVER `.glass-surface`)
+          const depthBlur = absDeg < 1.5 ? 0 : Math.min(5.2, depth * 6.4);
+          const totalBlur = depthBlur + smoothMotionBlur + verticalTransitionBlur;
+          const contentOpacity = Math.max(0.28, (1 - depth * 0.36) * verticalTransitionOpacity);
+
+          content.style.filter = totalBlur > 0.06 ? `blur(${totalBlur.toFixed(2)}px)` : 'none';
+          content.style.opacity = contentOpacity.toFixed(3);
+        }
+      }
+
+      function tick(now) {
+        if (isHorizontalDragging) {
+          const delta = Math.abs(currentAngle - prevRenderedAngle);
+          prevRenderedAngle = currentAngle;
+          renderFrame(delta);
+          rafId = requestAnimationFrame(tick);
+          return;
+        }
+
+        if (isAnimating) {
+          const elapsed = now - animStartTime;
+          const progress = Math.min(1, elapsed / SNAP_DURATION_MS);
+          const eased = easeOutQuart(progress); // Monotonic: ZERO bounce
+
+          currentAngle = animStartAngle + (animEndAngle - animStartAngle) * eased;
+          const delta = Math.abs(currentAngle - prevRenderedAngle);
+          prevRenderedAngle = currentAngle;
+
+          renderFrame(delta);
+
+          if (progress < 1) {
+            rafId = requestAnimationFrame(tick);
           } else {
-            showToast('Long-press number to copy');
+            currentAngle = animEndAngle;
+            prevRenderedAngle = currentAngle;
+            isAnimating = false;
+            smoothMotionBlur = 0;
+            renderFrame(0);
+            rafId = null;
+          }
+          return;
+        }
+
+        if (smoothMotionBlur > 0.04) {
+          renderFrame(0);
+          rafId = requestAnimationFrame(tick);
+        } else {
+          smoothMotionBlur = 0;
+          renderFrame(0);
+          rafId = null;
+        }
+      }
+
+      function ensureLoop() {
+        if (!rafId) rafId = requestAnimationFrame(tick);
+      }
+
+      function glideToAngle(targetDeg) {
+        animStartAngle = currentAngle;
+        animEndAngle = targetDeg;
+        animStartTime = performance.now();
+        isAnimating = true;
+        ensureLoop();
+      }
+
+      function goToCard(index) {
+        const targetMod = (((-index * STEP_DEG) % 360) + 360) % 360;
+        const currentMod = ((currentAngle % 360) + 360) % 360;
+        let delta = targetMod - currentMod;
+        if (delta > 180) delta -= 360;
+        if (delta < -180) delta += 360;
+        glideToAngle(currentAngle + delta);
+      }
+
+      function stepBy(dir) {
+        const baseSnap = isAnimating
+          ? Math.round(animEndAngle / STEP_DEG)
+          : Math.round(currentAngle / STEP_DEG);
+        glideToAngle((baseSnap - dir) * STEP_DEG);
+      }
+
+      function startHorizontalDrag() {
+        isHorizontalDragging = true;
+        isAnimating = false;
+        dragStartAngle = currentAngle;
+        prevRenderedAngle = currentAngle;
+        dragVelocityDegPerMs = 0;
+        suppressClick = true;
+        ensureLoop();
+      }
+
+      function updateHorizontalDrag(dx, dtMs) {
+        if (!isHorizontalDragging) return;
+        const degPerPx = window.innerWidth < 640 ? 0.36 : 0.28;
+        const deltaDeg = dx * degPerPx;
+        currentAngle += deltaDeg;
+        dragVelocityDegPerMs = dragVelocityDegPerMs * 0.55 + (deltaDeg / Math.max(8, dtMs)) * 0.45;
+      }
+
+      function endHorizontalDrag() {
+        if (!isHorizontalDragging) return;
+        isHorizontalDragging = false;
+
+        const totalDragDeg = currentAngle - dragStartAngle;
+        const startSnapIdx = Math.round(dragStartAngle / STEP_DEG);
+        let targetSnapIdx = Math.round(currentAngle / STEP_DEG);
+
+        if (targetSnapIdx === startSnapIdx && (Math.abs(totalDragDeg) > 18 || Math.abs(dragVelocityDegPerMs) > 0.12)) {
+          targetSnapIdx = startSnapIdx + (totalDragDeg > 0 ? 1 : -1);
+        }
+
+        glideToAngle(targetSnapIdx * STEP_DEG);
+        setTimeout(() => { suppressClick = false; }, 80);
+      }
+
+      function setVerticalBlur(blurPx, opacity) {
+        verticalTransitionBlur = blurPx;
+        verticalTransitionOpacity = opacity;
+        renderFrame(0);
+      }
+
+      function init() {
+        const cardsMarkup = [
+          buildContactCardHtml(CARD_CONFIG.contacts[0], 0, CARD_CONFIG.logoColors[0], CARD_CONFIG.logoColors[1]),
+          buildContactCardHtml(CARD_CONFIG.contacts[1], 1, CARD_CONFIG.logoColors[1], CARD_CONFIG.logoColors[2]),
+          buildLocationCardHtml(CARD_CONFIG.logoColors[2], CARD_CONFIG.logoColors[3])
+        ];
+
+        ringEl.innerHTML = cardsMarkup.map((html, idx) => `
+          <div
+            data-card-index="${idx}"
+            data-front="${idx === 0 ? 'true' : 'false'}"
+            class="absolute top-0 left-0 rounded-[32px] will-change-transform"
+          >
+            ${html}
+          </div>
+        `).join('');
+
+        dotsEl.innerHTML = TAB_LABELS.map((label, idx) => `
+          <button
+            type="button"
+            role="tab"
+            aria-label="${esc(label)}"
+            data-dot-index="${idx}"
+          >
+            <span class="w-1.5 h-1.5 rounded-full shrink-0" style="background-color:${esc(TAB_ACCENTS[idx])}"></span>
+            <span>${esc(label)}</span>
+          </button>
+        `).join('');
+
+        cardNodes = Array.from(ringEl.querySelectorAll('[data-card-index]'));
+        contentNodes = cardNodes.map((n) => n.querySelector('.card-content'));
+        dotNodes = Array.from(dotsEl.querySelectorAll('[data-dot-index]'));
+
+        dotNodes.forEach((dot) => {
+          dot.addEventListener('click', () => goToCard(Number(dot.dataset.dotIndex)));
+        });
+
+        ringEl.addEventListener('click', (e) => {
+          if (suppressClick) {
+            e.preventDefault();
+            e.stopPropagation();
+            return;
+          }
+
+          const wrapper = e.target.closest('[data-card-index]');
+          if (!wrapper) return;
+
+          const idx = Number(wrapper.dataset.cardIndex);
+          if (wrapper.dataset.front !== 'true') {
+            e.preventDefault();
+            e.stopPropagation();
+            goToCard(idx);
+            return;
+          }
+
+          const saveBtn = e.target.closest('[data-save-contact-index]');
+          if (saveBtn) {
+            e.preventDefault();
+            const cIdx = Number(saveBtn.dataset.saveContactIndex);
+            const contact = CARD_CONFIG.contacts[cIdx];
+            if (contact) downloadVCard(contact);
           }
         });
-      });
 
-      // Attach Save vCard Listeners
-      container.querySelectorAll('.save-vcard-btn').forEach((btn) => {
-        btn.addEventListener('click', () => {
-          const idx = Number(btn.getAttribute('data-save-idx'));
-          const contact = CARD_CONFIG.contacts[idx];
-          if (contact) downloadVCard(contact);
+        window.addEventListener('resize', computeLayout, { passive: true });
+        computeLayout();
+        updateIndicators(0);
+      }
+
+      return {
+        init,
+        goToCard,
+        stepBy,
+        startHorizontalDrag,
+        updateHorizontalDrag,
+        endHorizontalDrag,
+        setVerticalBlur
+      };
+    })();
+
+    /* =========================================================================
+       10. ZERO-BOUNCE 3-SECTION VERTICAL NAVIGATION (820ms easeOutQuart)
+       Supports touch swipe up/down, mouse drag, wheel, keyboard arrows, and rail.
+    ========================================================================= */
+    const VerticalViewport = (() => {
+      const sections = [
+        document.getElementById('section-hero'),
+        document.getElementById('section-cards'),
+        document.getElementById('section-qr')
+      ];
+      const heroInner = document.getElementById('hero-inner');
+      const qrInner = document.getElementById('qr-inner');
+      const navDots = Array.from(document.querySelectorAll('[data-nav-section]'));
+      const carouselStage = document.getElementById('carousel-stage');
+
+      const SECTION_COUNT = 3;
+      const TRANSITION_MS = 820;
+
+      let currentPos = 0;
+      let activeIndex = 0;
+
+      let isAnimating = false;
+      let animStartPos = 0;
+      let animEndPos = 0;
+      let animStartTime = 0;
+      let rafId = null;
+
+      let pointerActive = false;
+      let pointerType = '';
+      let dragAxis = null;
+      let startedInCarousel = false;
+      let startX = 0;
+      let startY = 0;
+      let lastX = 0;
+      let lastY = 0;
+      let lastMoveTime = 0;
+      let verticalStartPos = 0;
+      let verticalVelocityPerMs = 0;
+      let wheelCooldownUntil = 0;
+
+      function easeOutQuart(t) {
+        return 1 - Math.pow(1 - t, 4);
+      }
+
+      function updateNavDots(idx) {
+        navDots.forEach((dot, i) => {
+          const active = i === idx;
+          dot.className = active
+            ? 'w-1.5 h-6 rounded-full bg-slate-900 dark:bg-white transition-all duration-500 ease-silk cursor-pointer'
+            : 'w-1.5 h-1.5 rounded-full bg-slate-900/25 dark:bg-white/25 hover:bg-slate-900/50 dark:hover:bg-white/50 transition-all duration-500 ease-silk cursor-pointer';
         });
+      }
+
+      function applyPositions() {
+        const vh = window.innerHeight || 1;
+        const nearest = Math.max(0, Math.min(SECTION_COUNT - 1, Math.round(currentPos)));
+
+        // Continuously drive background yarn thread opacity along the vertical swipe flow
+        LogoFluidYarnCanvas.setSectionProgress(currentPos);
+
+        if (nearest !== activeIndex) {
+          activeIndex = nearest;
+          updateNavDots(activeIndex);
+        }
+
+        for (let i = 0; i < SECTION_COUNT; i++) {
+          const sec = sections[i];
+          if (!sec) continue;
+          const offset = i - currentPos;
+          const yPx = offset * vh;
+          const dist = Math.min(1, Math.abs(offset));
+
+          sec.style.transform = `translate3d(0px, ${yPx.toFixed(2)}px, 0px)`;
+          sec.style.visibility = Math.abs(offset) > 1.15 ? 'hidden' : 'visible';
+          sec.style.pointerEvents = dist < 0.35 ? 'auto' : 'none';
+
+          // Progressive blur applied strictly to inner content (NEVER `.glass-surface`)
+          const blurPx = dist < 0.005 ? 0 : dist * 8.5;
+          const opacity = Math.max(0.28, 1 - dist * 0.72);
+
+          if (i === 0 && heroInner) {
+            heroInner.style.filter = blurPx > 0.05 ? `blur(${blurPx.toFixed(2)}px)` : 'none';
+            heroInner.style.transform = `scale(${(1 - dist * 0.04).toFixed(4)})`;
+            heroInner.style.opacity = opacity.toFixed(3);
+          } else if (i === 1) {
+            CarouselOrbit.setVerticalBlur(blurPx, opacity);
+          } else if (i === 2 && qrInner) {
+            qrInner.style.filter = blurPx > 0.05 ? `blur(${blurPx.toFixed(2)}px)` : 'none';
+            qrInner.style.opacity = opacity.toFixed(3);
+          }
+        }
+      }
+
+      function tick(now) {
+        if (!isAnimating) {
+          rafId = null;
+          return;
+        }
+
+        const elapsed = now - animStartTime;
+        const progress = Math.min(1, elapsed / TRANSITION_MS);
+        const eased = easeOutQuart(progress); // Monotonic: ZERO bounce
+
+        currentPos = animStartPos + (animEndPos - animStartPos) * eased;
+        applyPositions();
+
+        if (progress < 1) {
+          rafId = requestAnimationFrame(tick);
+        } else {
+          currentPos = animEndPos;
+          isAnimating = false;
+          rafId = null;
+          applyPositions();
+        }
+      }
+
+      function goToSection(index) {
+        const clamped = Math.max(0, Math.min(SECTION_COUNT - 1, index));
+        if (Math.abs(currentPos - clamped) < 0.001 && !isAnimating) return;
+        animStartPos = currentPos;
+        animEndPos = clamped;
+        animStartTime = performance.now();
+        isAnimating = true;
+        if (!rafId) rafId = requestAnimationFrame(tick);
+      }
+
+      function beginGesture(clientX, clientY, target, type) {
+        if (CardImageGenerator.isOpen()) return;
+        if (target && target.closest('input, textarea, select')) return;
+
+        pointerActive = true;
+        pointerType = type;
+        dragAxis = null;
+        startedInCarousel = Boolean(carouselStage && target && carouselStage.contains(target) && Math.round(currentPos) === 1);
+        startX = clientX;
+        startY = clientY;
+        lastX = clientX;
+        lastY = clientY;
+        lastMoveTime = performance.now();
+        verticalStartPos = currentPos;
+        verticalVelocityPerMs = 0;
+      }
+
+      function moveGesture(clientX, clientY, preventDefaultFn) {
+        if (!pointerActive) return;
+
+        const now = performance.now();
+        const dt = Math.max(8, now - lastMoveTime);
+        const dxTotal = clientX - startX;
+        const dyTotal = clientY - startY;
+        const dist = Math.hypot(dxTotal, dyTotal);
+
+        if (!dragAxis && dist > 9) {
+          if (startedInCarousel && Math.abs(dxTotal) > Math.abs(dyTotal) * 1.1) {
+            dragAxis = 'x';
+            CarouselOrbit.startHorizontalDrag();
+          } else if (Math.abs(dyTotal) >= Math.abs(dxTotal)) {
+            dragAxis = 'y';
+            isAnimating = false;
+            verticalStartPos = currentPos;
+          } else {
+            dragAxis = 'ignore';
+          }
+        }
+
+        const dx = clientX - lastX;
+        const dy = clientY - lastY;
+        lastX = clientX;
+        lastY = clientY;
+        lastMoveTime = now;
+
+        if (dragAxis === 'x') {
+          if (preventDefaultFn) preventDefaultFn();
+          CarouselOrbit.updateHorizontalDrag(dx, dt);
+        } else if (dragAxis === 'y') {
+          if (preventDefaultFn) preventDefaultFn();
+          const vh = window.innerHeight || 1;
+          const deltaPos = -dy / vh;
+          currentPos = Math.max(0, Math.min(SECTION_COUNT - 1, currentPos + deltaPos));
+          verticalVelocityPerMs = verticalVelocityPerMs * 0.5 + (deltaPos / dt) * 0.5;
+          applyPositions();
+        }
+      }
+
+      function endGesture() {
+        if (!pointerActive) return;
+        pointerActive = false;
+
+        if (dragAxis === 'x') {
+          CarouselOrbit.endHorizontalDrag();
+        } else if (dragAxis === 'y') {
+          const moved = currentPos - verticalStartPos;
+          const baseIdx = Math.round(verticalStartPos);
+          let targetIdx = Math.round(currentPos);
+
+          if (targetIdx === baseIdx && (Math.abs(moved) > 0.11 || Math.abs(verticalVelocityPerMs) > 0.00045)) {
+            targetIdx = baseIdx + (moved > 0 ? 1 : -1);
+          }
+
+          goToSection(targetIdx);
+        }
+
+        dragAxis = null;
+        pointerType = '';
+      }
+
+      function init() {
+        const root = document.getElementById('viewport-root');
+
+        root.addEventListener('touchstart', (e) => {
+          if (e.touches.length !== 1) return;
+          beginGesture(e.touches[0].clientX, e.touches[0].clientY, e.target, 'touch');
+        }, { passive: true });
+
+        root.addEventListener('touchmove', (e) => {
+          if (!pointerActive || pointerType !== 'touch' || e.touches.length !== 1) return;
+          moveGesture(e.touches[0].clientX, e.touches[0].clientY, () => {
+            if (e.cancelable) e.preventDefault();
+          });
+        }, { passive: false });
+
+        root.addEventListener('touchend', () => {
+          if (pointerType === 'touch') endGesture();
+        }, { passive: true });
+
+        root.addEventListener('touchcancel', () => {
+          if (pointerType === 'touch') endGesture();
+        }, { passive: true });
+
+        root.addEventListener('mousedown', (e) => {
+          if (e.button !== 0) return;
+          if (e.target.closest('button, a') && !(carouselStage && carouselStage.contains(e.target))) return;
+          beginGesture(e.clientX, e.clientY, e.target, 'mouse');
+        });
+
+        window.addEventListener('mousemove', (e) => {
+          if (!pointerActive || pointerType !== 'mouse') return;
+          moveGesture(e.clientX, e.clientY, null);
+        });
+
+        window.addEventListener('mouseup', () => {
+          if (pointerType === 'mouse') endGesture();
+        });
+
+        window.addEventListener('wheel', (e) => {
+          if (CardImageGenerator.isOpen()) return;
+          const now = performance.now();
+          if (now < wheelCooldownUntil) return;
+          if (Math.abs(e.deltaY) > 22 && Math.abs(e.deltaY) >= Math.abs(e.deltaX)) {
+            const dir = e.deltaY > 0 ? 1 : -1;
+            const target = Math.max(0, Math.min(SECTION_COUNT - 1, activeIndex + dir));
+            if (target !== activeIndex) {
+              wheelCooldownUntil = now + 760;
+              goToSection(target);
+            }
+          } else if (activeIndex === 1 && Math.abs(e.deltaX) > 28 && Math.abs(e.deltaX) > Math.abs(e.deltaY)) {
+            wheelCooldownUntil = now + 540;
+            CarouselOrbit.stepBy(e.deltaX > 0 ? 1 : -1);
+          }
+        }, { passive: true });
+
+        window.addEventListener('keydown', (e) => {
+          if (e.key === 'Escape' && CardImageGenerator.isOpen()) {
+            CardImageGenerator.close();
+            return;
+          }
+          if (CardImageGenerator.isOpen()) return;
+          if (e.key === 'ArrowDown' || e.key === 'PageDown') {
+            goToSection(activeIndex + 1);
+          } else if (e.key === 'ArrowUp' || e.key === 'PageUp') {
+            goToSection(activeIndex - 1);
+          } else if (e.key === 'ArrowRight' && activeIndex === 1) {
+            CarouselOrbit.stepBy(1);
+          } else if (e.key === 'ArrowLeft' && activeIndex === 1) {
+            CarouselOrbit.stepBy(-1);
+          }
+        });
+
+        navDots.forEach((dot) => {
+          dot.addEventListener('click', () => goToSection(Number(dot.dataset.navSection)));
+        });
+
+        window.addEventListener('resize', applyPositions, { passive: true });
+        applyPositions();
+      }
+
+      return { init, goToSection };
+    })();
+
+    /* =========================================================================
+       11. SECTION 3: QR CODE RENDER + COPYABLE LINK + SHARE ACTIONS
+    ========================================================================= */
+    function initQrAndShare() {
+      const url = CARD_CONFIG.pageUrl;
+      const qrCanvas = document.getElementById('qr-canvas');
+      const urlLink = document.getElementById('share-url-link');
+      const copyBtn = document.getElementById('copy-link-btn');
+      const copyBtnLabel = document.getElementById('copy-btn-label');
+      const shareBtn = document.getElementById('share-page-btn');
+      const shareWaBtn = document.getElementById('share-whatsapp-btn');
+
+      if (urlLink) {
+        urlLink.textContent = url.replace(/^https?:\/\//, '');
+        urlLink.href = url;
+      }
+
+      if (shareWaBtn) {
+        const waText = `Check out ${CARD_CONFIG.brandName}'s Digital Visiting Card (${CARD_CONFIG.slogan}): ${url}`;
+        shareWaBtn.href = `https://wa.me/?text=${encodeURIComponent(waText)}`;
+      }
+
+      const drawQr = () => {
+        try {
+          PureQR.renderToCanvas(qrCanvas, url, '#0F172A', '#FFFFFF');
+        } catch (err) {}
+      };
+      drawQr();
+      window.addEventListener('resize', drawQr, { passive: true });
+
+      let copyResetTimer = null;
+      copyBtn?.addEventListener('click', () => {
+        const ok = copyTextSafe(url);
+        if (ok) {
+          if (copyBtnLabel) copyBtnLabel.textContent = 'Copied!';
+          clearTimeout(copyResetTimer);
+          copyResetTimer = setTimeout(() => {
+            if (copyBtnLabel) copyBtnLabel.textContent = 'Copy';
+          }, 1800);
+          showToast('Link copied!');
+        } else {
+          showToast('Long-press the link to copy');
+        }
       });
-    }
 
-    function renderWhatsAppOptions() {
-      const container = document.getElementById('whatsapp-container');
-      container.innerHTML = CARD_CONFIG.whatsappOptions.map((item, idx) => {
-        const href = item.url ? item.url : buildWhatsAppUrl(item.number, item.message);
-        const delay = 290 + idx * 60;
-
-        return `
-          <a
-            href="${escapeHtml(href)}"
-            target="_blank"
-            rel="noopener noreferrer"
-            class="group relative overflow-hidden flex items-center justify-between gap-3.5 p-3.5 rounded-2xl bg-surface/85 backdrop-blur-xl border border-white/[0.08] hover:border-whatsapp/45 hover:bg-[#161D18]/90 active:scale-[0.98] transition-all duration-200 animate-fade-up"
-            style="animation-delay: ${delay}ms;"
-          >
-            <div class="flex items-center gap-3.5 min-w-0">
-              <div class="w-11 h-11 rounded-xl shrink-0 bg-whatsapp/15 border border-whatsapp/30 text-whatsapp flex items-center justify-center shadow-[0_0_20px_rgba(37,211,102,0.12)] group-hover:scale-105 transition-transform">
-                <span class="scale-125">${ICONS.whatsapp}</span>
-              </div>
-              <div class="min-w-0">
-                <p class="text-sm font-semibold text-white truncate group-hover:text-[#6EE7B7] transition-colors">
-                  ${escapeHtml(item.title)}
-                </p>
-                <p class="text-xs text-neutral-400 truncate mt-0.5">
-                  ${escapeHtml(item.subtitle)}
-                </p>
-              </div>
-            </div>
-            <div class="shrink-0 w-8 h-8 rounded-full bg-white/[0.04] group-hover:bg-whatsapp/15 flex items-center justify-center transition-colors">
-              ${ICONS.arrow}
-            </div>
-          </a>
-        `;
-      }).join('');
-    }
-
-    function renderInstagramOptions() {
-      const container = document.getElementById('instagram-container');
-      container.innerHTML = CARD_CONFIG.instagramOptions.map((item, idx) => {
-        const delay = 370 + idx * 60;
-
-        return `
-          <a
-            href="${escapeHtml(item.url)}"
-            target="_blank"
-            rel="noopener noreferrer"
-            class="group relative overflow-hidden flex items-center justify-between gap-3.5 p-3.5 rounded-2xl bg-surface/85 backdrop-blur-xl border border-white/[0.08] hover:border-pink-500/40 hover:bg-[#1B1418]/90 active:scale-[0.98] transition-all duration-200 animate-fade-up"
-            style="animation-delay: ${delay}ms;"
-          >
-            <div class="flex items-center gap-3.5 min-w-0">
-              <div class="w-11 h-11 rounded-xl shrink-0 bg-gradient-to-tr from-[#f09433] via-[#dc2743] to-[#bc1888] flex items-center justify-center shadow-[0_6px_20px_rgba(220,39,67,0.28)] group-hover:scale-105 transition-transform">
-                ${ICONS.instagram}
-              </div>
-              <div class="min-w-0">
-                <p class="text-sm font-semibold text-white truncate">
-                  ${escapeHtml(item.title)}
-                </p>
-                <p class="text-xs text-pink-300/85 font-medium truncate mt-0.5">
-                  ${escapeHtml(item.handle)}
-                </p>
-              </div>
-            </div>
-            <div class="shrink-0 w-8 h-8 rounded-full bg-white/[0.04] group-hover:bg-pink-500/15 flex items-center justify-center transition-colors">
-              ${ICONS.arrow}
-            </div>
-          </a>
-        `;
-      }).join('');
-    }
-
-    function renderAdditionalDetails() {
-      const container = document.getElementById('additional-container');
-      const { email, emailTitle, locationTitle, addressText, mapsUrl } = CARD_CONFIG.additional;
-
-      container.innerHTML = `
-        <!-- Email Row -->
-        <a
-          href="mailto:${escapeHtml(email)}"
-          class="group flex items-center justify-between gap-3.5 p-3.5 rounded-2xl bg-surface/85 backdrop-blur-xl border border-white/[0.08] hover:border-gold/40 active:scale-[0.98] transition-all duration-200 animate-fade-up"
-          style="animation-delay: 440ms;"
-        >
-          <div class="flex items-center gap-3.5 min-w-0">
-            <div class="w-11 h-11 rounded-xl shrink-0 bg-gold/12 border border-gold/25 text-gold-light flex items-center justify-center">
-              ${ICONS.email}
-            </div>
-            <div class="min-w-0">
-              <p class="text-sm font-semibold text-white truncate">${escapeHtml(emailTitle)}</p>
-              <p class="text-xs text-neutral-400 truncate mt-0.5">${escapeHtml(email)}</p>
-            </div>
-          </div>
-          <div class="shrink-0 w-8 h-8 rounded-full bg-white/[0.04] group-hover:bg-gold/15 flex items-center justify-center transition-colors">
-            ${ICONS.arrow}
-          </div>
-        </a>
-
-        <!-- Location / Google Maps Row -->
-        <a
-          href="${escapeHtml(mapsUrl)}"
-          target="_blank"
-          rel="noopener noreferrer"
-          class="group flex items-center justify-between gap-3.5 p-3.5 rounded-2xl bg-surface/85 backdrop-blur-xl border border-white/[0.08] hover:border-gold/40 active:scale-[0.98] transition-all duration-200 animate-fade-up"
-          style="animation-delay: 490ms;"
-        >
-          <div class="flex items-center gap-3.5 min-w-0">
-            <div class="w-11 h-11 rounded-xl shrink-0 bg-gold/12 border border-gold/25 text-gold-light flex items-center justify-center">
-              ${ICONS.mapPin}
-            </div>
-            <div class="min-w-0">
-              <p class="text-sm font-semibold text-white truncate">${escapeHtml(locationTitle)}</p>
-              <p class="text-xs text-neutral-400 truncate mt-0.5">${escapeHtml(addressText)}</p>
-            </div>
-          </div>
-          <div class="shrink-0 w-8 h-8 rounded-full bg-white/[0.04] group-hover:bg-gold/15 flex items-center justify-center transition-colors">
-            ${ICONS.arrow}
-          </div>
-        </a>
-
-        <!-- Share Card Row -->
-        <button
-          id="inline-share-btn"
-          type="button"
-          class="w-full text-left group flex items-center justify-between gap-3.5 p-3.5 rounded-2xl bg-surface/85 backdrop-blur-xl border border-white/[0.08] hover:border-gold/40 active:scale-[0.98] transition-all duration-200 animate-fade-up"
-          style="animation-delay: 540ms;"
-        >
-          <div class="flex items-center gap-3.5 min-w-0">
-            <div class="w-11 h-11 rounded-xl shrink-0 bg-white/[0.07] border border-white/[0.12] text-white flex items-center justify-center">
-              ${ICONS.share}
-            </div>
-            <div class="min-w-0">
-              <p class="text-sm font-semibold text-white truncate">Share This Digital Card</p>
-              <p class="text-xs text-neutral-400 truncate mt-0.5">Send link via WhatsApp, SMS or AirDrop</p>
-            </div>
-          </div>
-          <div class="shrink-0 w-8 h-8 rounded-full bg-white/[0.04] group-hover:bg-white/10 flex items-center justify-center transition-colors">
-            ${ICONS.arrow}
-          </div>
-        </button>
-      `;
-
-      document.getElementById('inline-share-btn').addEventListener('click', shareCard);
-    }
-
-    function renderFooter() {
-      const footer = document.getElementById('card-footer');
-      footer.innerHTML = `
-        <p class="text-[11px] text-neutral-500 tracking-wide">
-          ${escapeHtml(CARD_CONFIG.brand.footerText)}
-        </p>
-      `;
+      shareBtn?.addEventListener('click', async () => {
+        try {
+          if (navigator.share) {
+            await navigator.share({
+              title: `${CARD_CONFIG.brandName} — Digital Visiting Card`,
+              text: `${CARD_CONFIG.brandName} — ${CARD_CONFIG.slogan}`,
+              url
+            });
+            return;
+          }
+        } catch (err) {
+          if (err && err.name === 'AbortError') return;
+        }
+        const ok = copyTextSafe(url);
+        showToast(ok ? 'Link copied — ready to share!' : 'Copy the link above to share');
+      });
     }
 
     /* =========================================================================
-       QR MODAL CONTROLLER
+       12. HIGH-RESOLUTION "SAVE CARD TO GALLERY" PNG GENERATOR (1600 x 960)
+       - Left Column (~62%): Crisp white logo squircle (./logo.png or gradient RC),
+         RADHE CREATION directly below, yarn specialties line, 6-color spectrum
+         divider, and both contacts with names, roles, and numbers.
+       - Right Column (~38%): Vertically centered crisp white QR plate encoding
+         the exact Google Maps Location URL + "SCAN FOR LOCATION" caption.
+       - Uses Web Share API with File (for instant iPhone/Android Save to Photos)
+         plus direct PNG download & native long-press image saving.
     ========================================================================= */
-    function initQrModal() {
-      const modal = document.getElementById('qr-modal');
-      const modalCard = document.getElementById('qr-modal-card');
-      const canvas = document.getElementById('qr-canvas');
-      const urlDisplay = document.getElementById('qr-url-display');
-      const openBtn = document.getElementById('dock-qr-btn');
-      const closeBtn = document.getElementById('qr-close-btn');
-      const copyBtn = document.getElementById('qr-copy-btn');
-      const downloadBtn = document.getElementById('qr-download-btn');
+    const CardImageGenerator = (() => {
+      const CARD_W = 1600;
+      const CARD_H = 960;
+      const FILE_NAME = 'Radhe-Creation-Card.png';
 
-      const openModal = () => {
-        const url = getShareableUrl();
-        urlDisplay.textContent = url;
-        try {
-          QRGenerator.renderToCanvas(canvas, url, 212);
-        } catch (err) {
-          showToast('Unable to render QR code');
+      let modalEl = null;
+      let previewImg = null;
+      let currentBlob = null;
+      let currentObjectUrl = '';
+      let modalOpen = false;
+
+      /**
+       * Traces a rounded rectangle path cleanly across all browsers.
+       */
+      function traceRoundedRect(ctx, x, y, w, h, r) {
+        const rad = Math.min(r, w / 2, h / 2);
+        ctx.beginPath();
+        ctx.moveTo(x + rad, y);
+        ctx.arcTo(x + w, y, x + w, y + h, rad);
+        ctx.arcTo(x + w, y + h, x, y + h, rad);
+        ctx.arcTo(x, y + h, x, y, rad);
+        ctx.arcTo(x, y, x + w, y, rad);
+        ctx.closePath();
+      }
+
+      /**
+       * Checks whether the loaded brand logo can be drawn onto the export canvas
+       * without tainting it (CORS safety check).
+       */
+      function canDrawLogoSafely(imgEl) {
+        if (!imgEl || !imgEl.complete || imgEl.naturalWidth === 0 || imgEl.classList.contains('hidden')) {
+          return false;
         }
+        try {
+          const probe = document.createElement('canvas');
+          probe.width = 2;
+          probe.height = 2;
+          const pctx = probe.getContext('2d');
+          pctx.drawImage(imgEl, 0, 0, 2, 2);
+          pctx.getImageData(0, 0, 1, 1);
+          return true;
+        } catch (err) {
+          return false;
+        }
+      }
 
-        modal.classList.remove('hidden');
-        modal.classList.add('flex');
-        requestAnimationFrame(() => {
-          modal.classList.remove('opacity-0');
-          modal.classList.add('opacity-100');
-          modalCard.classList.remove('scale-95');
-          modalCard.classList.add('scale-100');
+      /**
+       * Draws a crisp minimalist phone glyph inside a colored circle badge (styled for pure white card).
+       */
+      function drawPhoneBadge(ctx, cx, cy, radius, accentHex) {
+        ctx.save();
+        ctx.beginPath();
+        ctx.arc(cx, cy, radius, 0, Math.PI * 2);
+        ctx.fillStyle = accentHex;
+        ctx.globalAlpha = 0.13;
+        ctx.fill();
+        ctx.globalAlpha = 1;
+        ctx.lineWidth = 2;
+        ctx.strokeStyle = accentHex;
+        ctx.stroke();
+
+        // Crisp vector phone handset in brand accent color
+        ctx.translate(cx, cy);
+        ctx.strokeStyle = accentHex;
+        ctx.lineWidth = 3.2;
+        ctx.lineCap = 'round';
+        ctx.lineJoin = 'round';
+        ctx.beginPath();
+        ctx.moveTo(-10, -11);
+        ctx.lineTo(-4, -11);
+        ctx.lineTo(-1, -4);
+        ctx.lineTo(-5, -1);
+        ctx.quadraticCurveTo(-3, 5, 2, 7);
+        ctx.lineTo(5, 3);
+        ctx.lineTo(12, 6);
+        ctx.lineTo(12, 11);
+        ctx.quadraticCurveTo(12, 14, 8, 14);
+        ctx.quadraticCurveTo(-13, 12, -13, -8);
+        ctx.quadraticCurveTo(-13, -11, -10, -11);
+        ctx.stroke();
+        ctx.restore();
+      }
+
+      /**
+       * Draws a crisp minimalist map pin icon next to the location subtitle.
+       */
+      function drawMapPin(ctx, cx, cy, color) {
+        ctx.save();
+        ctx.translate(cx, cy);
+        ctx.fillStyle = color;
+        ctx.beginPath();
+        ctx.moveTo(0, 11);
+        ctx.bezierCurveTo(-8, 2, -10, -2, -10, -5);
+        ctx.arc(0, -5, 10, Math.PI, 0, false);
+        ctx.bezierCurveTo(10, -2, 8, 2, 0, 11);
+        ctx.closePath();
+        ctx.fill();
+
+        ctx.fillStyle = '#FFFFFF';
+        ctx.beginPath();
+        ctx.arc(0, -5, 3.6, 0, Math.PI * 2);
+        ctx.fill();
+        ctx.restore();
+      }
+
+      /**
+       * Renders the 1600x960 luxury textile visiting card ALWAYS on a pure white background.
+       */
+      function renderCardCanvas() {
+        const c = document.createElement('canvas');
+        c.width = CARD_W;
+        c.height = CARD_H;
+        const ctx = c.getContext('2d');
+        const colors = CARD_CONFIG.logoColors;
+        const fontFamily = '"Inter", -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif';
+
+        // Clip outer rounded card silhouette (48px corner radius)
+        ctx.save();
+        traceRoundedRect(ctx, 0, 0, CARD_W, CARD_H, 48);
+        ctx.clip();
+
+        // 1. Always-White Studio Backdrop (independent of phone Dark/Light mode)
+        ctx.fillStyle = '#FFFFFF';
+        ctx.fillRect(0, 0, CARD_W, CARD_H);
+
+        // 2. Ultra-Subtle Brand-Color Pastel Corner Glows
+        const glows = [
+          { x: 200, y: 150, r: 460, hex: colors[0], a: 0.065 },
+          { x: 760, y: 880, r: 460, hex: colors[2], a: 0.055 },
+          { x: 1480, y: 120, r: 420, hex: colors[1], a: 0.060 },
+          { x: 1420, y: 860, r: 420, hex: colors[5], a: 0.055 }
+        ];
+        glows.forEach((g) => {
+          const rgb = hexToRgb(g.hex);
+          const rad = ctx.createRadialGradient(g.x, g.y, 0, g.x, g.y, g.r);
+          rad.addColorStop(0, `rgba(${rgb[0]},${rgb[1]},${rgb[2]},${g.a})`);
+          rad.addColorStop(1, `rgba(${rgb[0]},${rgb[1]},${rgb[2]},0)`);
+          ctx.fillStyle = rad;
+          ctx.beginPath();
+          ctx.arc(g.x, g.y, g.r, 0, Math.PI * 2);
+          ctx.fill();
         });
-      };
 
-      const closeModal = () => {
-        modal.classList.remove('opacity-100');
-        modal.classList.add('opacity-0');
-        modalCard.classList.remove('scale-100');
-        modalCard.classList.add('scale-95');
-        setTimeout(() => {
-          modal.classList.add('hidden');
-          modal.classList.remove('flex');
-        }, 200);
-      };
-
-      openBtn.addEventListener('click', openModal);
-      closeBtn.addEventListener('click', closeModal);
-      modal.addEventListener('click', (e) => {
-        if (e.target === modal) closeModal();
-      });
-      document.addEventListener('keydown', (e) => {
-        if (e.key === 'Escape' && !modal.classList.contains('hidden')) closeModal();
-      });
-
-      copyBtn.addEventListener('click', () => {
-        const ok = copyTextToClipboard(getShareableUrl());
-        showToast(ok ? 'Link copied!' : 'Could not copy link');
-      });
-
-      downloadBtn.addEventListener('click', () => {
-        try {
-          const link = document.createElement('a');
-          const safeBrand = CARD_CONFIG.brand.name.replace(/[^a-z0-9]+/gi, '_') || 'NFC_Card';
-          link.download = `${safeBrand}_QR.png`;
-          link.href = canvas.toDataURL('image/png');
-          document.body.appendChild(link);
-          link.click();
-          document.body.removeChild(link);
-          showToast('QR Code PNG downloaded!');
-        } catch (err) {
-          showToast('Download failed');
+        // 3. Delicate Woven Diagonal Yarn-Thread Texture Across White Backdrop
+        ctx.save();
+        ctx.lineCap = 'round';
+        for (let i = 0; i < 18; i++) {
+          const rgb = hexToRgb(colors[i % colors.length]);
+          const yStart = -120 + i * 78;
+          ctx.beginPath();
+          ctx.moveTo(-60, yStart);
+          ctx.bezierCurveTo(
+            CARD_W * 0.34, yStart + 140 + (i % 3) * 35,
+            CARD_W * 0.68, yStart - 90 - (i % 4) * 28,
+            CARD_W + 60, yStart + 110
+          );
+          ctx.strokeStyle = `rgba(${rgb[0]},${rgb[1]},${rgb[2]},0.075)`;
+          ctx.lineWidth = 1.5 + (i % 3) * 0.5;
+          ctx.stroke();
         }
-      });
-    }
+        ctx.restore();
+
+        // 4. Top 6-Color Brand Spectrum Accent Strip
+        const topBarGrad = ctx.createLinearGradient(0, 0, CARD_W, 0);
+        colors.forEach((hex, idx) => {
+          topBarGrad.addColorStop(idx / (colors.length - 1), hex);
+        });
+        ctx.fillStyle = topBarGrad;
+        ctx.fillRect(0, 0, CARD_W, 12);
+
+        // =====================================================================
+        // LEFT COLUMN (~62% WIDTH: x = 92 .. 968)
+        // Company Logo -> Below it: RADHE CREATION + Slogan -> Divider -> 2 Contacts
+        // =====================================================================
+        const leftX = 92;
+        const leftW = 876;
+
+        // 5. Crisp White Rounded Squircle Logo Badge (168x168)
+        const logoBoxSize = 168;
+        const logoBoxY = 78;
+        ctx.save();
+        ctx.shadowColor = 'rgba(15, 23, 42, 0.09)';
+        ctx.shadowBlur = 28;
+        ctx.shadowOffsetY = 10;
+        traceRoundedRect(ctx, leftX, logoBoxY, logoBoxSize, logoBoxSize, 36);
+        ctx.fillStyle = '#FFFFFF';
+        ctx.fill();
+        ctx.restore();
+
+        ctx.save();
+        traceRoundedRect(ctx, leftX, logoBoxY, logoBoxSize, logoBoxSize, 36);
+        ctx.lineWidth = 1.5;
+        ctx.strokeStyle = '#E2E8F0';
+        ctx.stroke();
+        ctx.restore();
+
+        // Draw real ./logo.png if cleanly loaded, else crisp gradient RC emblem
+        const brandLogoEl = document.getElementById('brandLogo');
+        if (canDrawLogoSafely(brandLogoEl)) {
+          const pad = 16;
+          const maxBox = logoBoxSize - pad * 2;
+          const scale = Math.min(maxBox / brandLogoEl.naturalWidth, maxBox / brandLogoEl.naturalHeight);
+          const dw = brandLogoEl.naturalWidth * scale;
+          const dh = brandLogoEl.naturalHeight * scale;
+          const dx = leftX + (logoBoxSize - dw) / 2;
+          const dy = logoBoxY + (logoBoxSize - dh) / 2;
+          ctx.drawImage(brandLogoEl, dx, dy, dw, dh);
+        } else {
+          ctx.save();
+          const rcGrad = ctx.createLinearGradient(leftX, logoBoxY, leftX + logoBoxSize, logoBoxY + logoBoxSize);
+          rcGrad.addColorStop(0, colors[0]);
+          rcGrad.addColorStop(0.35, colors[1]);
+          rcGrad.addColorStop(0.68, colors[2]);
+          rcGrad.addColorStop(1, colors[5]);
+          ctx.fillStyle = rcGrad;
+          ctx.font = `800 76px ${fontFamily}`;
+          ctx.textAlign = 'center';
+          ctx.textBaseline = 'middle';
+          ctx.fillText('RC', leftX + logoBoxSize / 2, logoBoxY + logoBoxSize / 2 + 4);
+          ctx.restore();
+        }
+
+        // 6. Company Name Directly Below Logo
+        const brandY = logoBoxY + logoBoxSize + 58;
+        ctx.fillStyle = '#0F172A';
+        ctx.font = `800 58px ${fontFamily}`;
+        ctx.textAlign = 'left';
+        ctx.textBaseline = 'alphabetic';
+        ctx.fillText(CARD_CONFIG.brandName, leftX, brandY);
+
+        // 7. Yarn Specialties Slogan Line
+        const sloganY = brandY + 42;
+        ctx.fillStyle = '#475569';
+        ctx.font = `500 24px ${fontFamily}`;
+        ctx.fillText(CARD_CONFIG.slogan, leftX, sloganY);
+
+        // 8. Thin 6-Color Brand Spectrum Divider
+        const divY = sloganY + 38;
+        const divGrad = ctx.createLinearGradient(leftX, divY, leftX + leftW, divY);
+        colors.forEach((hex, idx) => {
+          divGrad.addColorStop(idx / (colors.length - 1), hex);
+        });
+        ctx.fillStyle = divGrad;
+        traceRoundedRect(ctx, leftX, divY, 300, 4, 2);
+        ctx.fill();
+        ctx.fillStyle = '#E2E8F0';
+        ctx.fillRect(leftX + 314, divY + 1, leftW - 314, 2);
+
+        // 9. Two Contacts Stacked Cleanly on Soft White Plates
+        const contactsStartY = divY + 42;
+        const rowH = 158;
+        const rowGap = 26;
+        const contactAccents = [colors[0], colors[2]];
+
+        CARD_CONFIG.contacts.slice(0, 2).forEach((contact, idx) => {
+          const ry = contactsStartY + idx * (rowH + rowGap);
+          const accent = contactAccents[idx % contactAccents.length];
+
+          // Clean Light Contact Row Surface
+          ctx.save();
+          traceRoundedRect(ctx, leftX, ry, leftW, rowH, 28);
+          ctx.fillStyle = '#F8FAFC';
+          ctx.fill();
+          ctx.lineWidth = 1.5;
+          ctx.strokeStyle = '#E2E8F0';
+          ctx.stroke();
+          ctx.restore();
+
+          // Left Accent Pill Bar
+          ctx.save();
+          traceRoundedRect(ctx, leftX + 20, ry + 30, 6, rowH - 60, 3);
+          ctx.fillStyle = accent;
+          ctx.fill();
+          ctx.restore();
+
+          // Circular Phone Badge
+          drawPhoneBadge(ctx, leftX + 78, ry + rowH / 2, 34, accent);
+
+          // Contact Name
+          const textX = leftX + 138;
+          ctx.fillStyle = '#0F172A';
+          ctx.font = `700 35px ${fontFamily}`;
+          ctx.textAlign = 'left';
+          ctx.textBaseline = 'alphabetic';
+          ctx.fillText(contact.name, textX, ry + 64);
+
+          // Role Tag beside Contact Name
+          const nameWidth = ctx.measureText(contact.name).width;
+          const roleText = contact.role.toUpperCase();
+          ctx.font = `700 16px ${fontFamily}`;
+          const roleTextW = ctx.measureText(roleText).width;
+          const pillW = roleTextW + 26;
+          const pillX = Math.min(textX + nameWidth + 18, leftX + leftW - pillW - 24);
+          const pillY = ry + 36;
+
+          ctx.save();
+          traceRoundedRect(ctx, pillX, pillY, pillW, 32, 16);
+          const aRgb = hexToRgb(accent);
+          ctx.fillStyle = `rgba(${aRgb[0]},${aRgb[1]},${aRgb[2]},0.12)`;
+          ctx.fill();
+          ctx.lineWidth = 1.2;
+          ctx.strokeStyle = `rgba(${aRgb[0]},${aRgb[1]},${aRgb[2]},0.40)`;
+          ctx.stroke();
+          ctx.fillStyle = '#0F172A';
+          ctx.textAlign = 'center';
+          ctx.textBaseline = 'middle';
+          ctx.fillText(roleText, pillX + pillW / 2, pillY + 17);
+          ctx.restore();
+
+          // Contact Phone Number
+          ctx.fillStyle = '#334155';
+          ctx.font = `600 32px ${fontFamily}`;
+          ctx.textAlign = 'left';
+          ctx.textBaseline = 'alphabetic';
+          ctx.fillText(contact.phoneDisplay, textX, ry + 122);
+        });
+
+        // Subtle Left Footer URL
+        ctx.fillStyle = '#64748B';
+        ctx.font = `600 20px ${fontFamily}`;
+        ctx.textAlign = 'left';
+        ctx.textBaseline = 'alphabetic';
+        ctx.fillText(CARD_CONFIG.pageUrl.replace(/^https?:\/\//, ''), leftX + 6, CARD_H - 42);
+
+        // =====================================================================
+        // RIGHT COLUMN (~38% WIDTH: x = 1046 .. 1514)
+        // Vertically Centered White QR Card Encoding the Location URL
+        // =====================================================================
+        const qrCardW = 468;
+        const qrCardH = 620;
+        const qrCardX = CARD_W - 86 - qrCardW; // 1046
+        const qrCardY = Math.round((CARD_H - qrCardH) / 2); // 170
+
+        // Subtle Vertical Hairline Separator
+        ctx.fillStyle = '#E2E8F0';
+        ctx.fillRect(qrCardX - 42, 112, 1.5, CARD_H - 224);
+
+        // White Rounded QR Plate with Clean Light Elevation & Hairline Border
+        ctx.save();
+        ctx.shadowColor = 'rgba(15, 23, 42, 0.10)';
+        ctx.shadowBlur = 36;
+        ctx.shadowOffsetY = 14;
+        traceRoundedRect(ctx, qrCardX, qrCardY, qrCardW, qrCardH, 40);
+        ctx.fillStyle = '#FFFFFF';
+        ctx.fill();
+        ctx.restore();
+
+        ctx.save();
+        traceRoundedRect(ctx, qrCardX, qrCardY, qrCardW, qrCardH, 40);
+        ctx.lineWidth = 1.5;
+        ctx.strokeStyle = '#E2E8F0';
+        ctx.stroke();
+        ctx.restore();
+
+        // Top Subtle Accent Pill Inside White QR Plate
+        const pillBarW = 84;
+        const qrBarGrad = ctx.createLinearGradient(qrCardX + (qrCardW - pillBarW) / 2, 0, qrCardX + (qrCardW + pillBarW) / 2, 0);
+        qrBarGrad.addColorStop(0, colors[0]);
+        qrBarGrad.addColorStop(0.5, colors[2]);
+        qrBarGrad.addColorStop(1, colors[5]);
+        ctx.fillStyle = qrBarGrad;
+        traceRoundedRect(ctx, qrCardX + (qrCardW - pillBarW) / 2, qrCardY + 28, pillBarW, 6, 3);
+        ctx.fill();
+
+        // Real, Scannable Location QR Code via Embedded PureQR Engine
+        const locationUrl = getGoogleMapsUrl(CARD_CONFIG.location);
+        const qrSize = 376;
+        const qrX = qrCardX + Math.round((qrCardW - qrSize) / 2);
+        const qrY = qrCardY + 56;
+        PureQR.drawToContext(ctx, locationUrl, qrX, qrY, qrSize, '#0F172A', '#FFFFFF', 2);
+
+        // Caption Directly Beneath QR: "SCAN FOR LOCATION"
+        const qrCenterX = qrCardX + qrCardW / 2;
+        ctx.fillStyle = '#0F172A';
+        ctx.font = `800 25px ${fontFamily}`;
+        ctx.textAlign = 'center';
+        ctx.textBaseline = 'alphabetic';
+        ctx.fillText('SCAN FOR LOCATION', qrCenterX, qrY + qrSize + 54);
+
+        // Location Pin Subtitle (e.g., Surat, Gujarat, India)
+        const locSub = CARD_CONFIG.location.addressLine2 || CARD_CONFIG.location.addressLine1 || 'Surat, Gujarat';
+        const shortLoc = locSub.length > 30 ? locSub.slice(0, 29) + '…' : locSub;
+        ctx.font = `600 21px ${fontFamily}`;
+        const subW = ctx.measureText(shortLoc).width;
+        const pinX = qrCenterX - subW / 2 - 14;
+        const subY = qrY + qrSize + 94;
+
+        drawMapPin(ctx, pinX, subY - 7, colors[0]);
+        ctx.fillStyle = '#475569';
+        ctx.textAlign = 'left';
+        ctx.fillText(shortLoc, pinX + 18, subY);
+
+        // Crisp Subtle Outer Border Around Entire White Card
+        ctx.restore();
+        ctx.save();
+        traceRoundedRect(ctx, 1, 1, CARD_W - 2, CARD_H - 2, 48);
+        ctx.lineWidth = 2;
+        ctx.strokeStyle = '#E2E8F0';
+        ctx.stroke();
+        ctx.restore();
+
+        return c;
+      }
+
+      function triggerDirectDownload() {
+        if (!currentObjectUrl) return;
+        const a = document.createElement('a');
+        a.href = currentObjectUrl;
+        a.download = FILE_NAME;
+        document.body.appendChild(a);
+        a.click();
+        document.body.removeChild(a);
+        showToast('Card saved as PNG!');
+      }
+
+      async function handleShareOrSavePhotos() {
+        try {
+          if (currentBlob && typeof File !== 'undefined' && navigator.share && navigator.canShare) {
+            const file = new File([currentBlob], FILE_NAME, { type: 'image/png' });
+            if (navigator.canShare({ files: [file] })) {
+              await navigator.share({
+                files: [file],
+                title: `${CARD_CONFIG.brandName} — Visiting Card`,
+                text: `${CARD_CONFIG.brandName} (${CARD_CONFIG.slogan})`
+              });
+              return;
+            }
+          }
+        } catch (err) {
+          if (err && err.name === 'AbortError') return;
+        }
+        triggerDirectDownload();
+      }
+
+      function open() {
+        try {
+          const canvas = renderCardCanvas();
+          if (currentObjectUrl && currentObjectUrl.startsWith('blob:')) {
+            URL.revokeObjectURL(currentObjectUrl);
+          }
+
+          const showModalWithUrl = (url, blob) => {
+            currentObjectUrl = url;
+            currentBlob = blob;
+            if (previewImg) previewImg.src = url;
+            if (modalEl) {
+              modalEl.classList.remove('hidden');
+              modalEl.classList.add('flex');
+              modalOpen = true;
+            }
+          };
+
+          if (canvas.toBlob) {
+            canvas.toBlob((blob) => {
+              if (blob) {
+                showModalWithUrl(URL.createObjectURL(blob), blob);
+              } else {
+                showModalWithUrl(canvas.toDataURL('image/png'), null);
+              }
+            }, 'image/png', 1.0);
+          } else {
+            showModalWithUrl(canvas.toDataURL('image/png'), null);
+          }
+        } catch (err) {
+          showToast('Could not generate card image');
+        }
+      }
+
+      function close() {
+        if (!modalEl) return;
+        modalEl.classList.add('hidden');
+        modalEl.classList.remove('flex');
+        modalOpen = false;
+      }
+
+      function init() {
+        modalEl = document.getElementById('card-save-modal');
+        previewImg = document.getElementById('card-preview-img');
+
+        document.getElementById('open-save-card-btn')?.addEventListener('click', open);
+        document.getElementById('close-save-modal-btn')?.addEventListener('click', close);
+        document.getElementById('card-modal-backdrop')?.addEventListener('click', close);
+        document.getElementById('share-save-photos-btn')?.addEventListener('click', handleShareOrSavePhotos);
+        document.getElementById('download-png-btn')?.addEventListener('click', triggerDirectDownload);
+      }
+
+      return { init, open, close, isOpen: () => modalOpen };
+    })();
 
     /* =========================================================================
-       INITIALIZE APP
+       13. APPLICATION BOOTSTRAP
     ========================================================================= */
-    document.addEventListener('DOMContentLoaded', () => {
-      renderBrandHeader();
-      renderContacts();
-      renderWhatsAppOptions();
-      renderInstagramOptions();
-      renderAdditionalDetails();
-      renderFooter();
-      initQrModal();
+    window.addEventListener('load', () => {
+      SystemTheme.init();
+      initHeroSection();
+      LogoFluidYarnCanvas.init();
+      CarouselOrbit.init();
+      VerticalViewport.init();
+      initQrAndShare();
+      CardImageGenerator.init();
 
-      document.getElementById('dock-share-btn').addEventListener('click', shareCard);
+      document.getElementById('hero-to-contact-btn')?.addEventListener('click', () => {
+        VerticalViewport.goToSection(1);
+      });
+      document.getElementById('cards-to-qr-btn')?.addEventListener('click', () => {
+        VerticalViewport.goToSection(2);
+      });
+      document.getElementById('back-to-top-btn')?.addEventListener('click', () => {
+        VerticalViewport.goToSection(0);
+      });
+
+      document.getElementById('prev-card-btn')?.addEventListener('click', () => CarouselOrbit.stepBy(-1));
+      document.getElementById('next-card-btn')?.addEventListener('click', () => CarouselOrbit.stepBy(1));
     });
   </script>
 </body>
